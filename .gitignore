@@ -1,0 +1,5 @@
+.idea/
+.svn/
+*/datasets/
+*/models/
+*/__pycache__/
