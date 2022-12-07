@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from reimplementation.helpers import bias_helper
+from re_implementation.helpers import bias_helper
 
 appy_correction = False
 
@@ -61,7 +61,7 @@ class Encoder(tf.keras.Model):
         config.update({
             'num_channel': self.num_channel,
             'num_filter': self.num_filter,
-            'latent_dimensions': self.latent_dimensions,
+            'latent_dimensions': self.latent_dimensions
         })
         return config
 

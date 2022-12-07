@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from reimplementation.helpers import model_helper, dataset_helper
+from re_implementation.helpers import model_helper, dataset_helper
 
 # todo training = True check
 
@@ -21,6 +21,9 @@ for that paper too.
 """
 
 # tf.config.run_functions_eagerly(True)
+
+continue_ckpt = True
+checkpoint_epoch = '0004'
 
 dataset_type = 'grayscale'
 dataset = 'mnist'
@@ -53,6 +56,11 @@ cvae = model_helper.CVAE(
     decoder_dist=decoder_dist
 )
 
+if continue_ckpt:
+    cvae.load_weights(f'saved_models/{decoder_dist}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
+else:
+    checkpoint_epoch = 0
+
 cvae.encoder.print_network()
 cvae.decoder.print_network()
 cvae.print_network()
@@ -64,9 +72,10 @@ cvae.compile(
 )
 
 checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-    filepath=f'saved_models/{decoder_dist}/{dataset}/cvae-{method}',
+    filepath=f'saved_models/{decoder_dist}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
     monitor='val_loss',
-    save_best_only=True
+    save_best_only=True,
+    save_weights_only=True
 )
 
 cvae.fit(
@@ -77,6 +86,7 @@ cvae.fit(
     },
     batch_size=batch_size,
     epochs=epochs,
+    initial_epoch=checkpoint_epoch,
     callbacks=checkpoint_cb,
     validation_split=val_split
 )
