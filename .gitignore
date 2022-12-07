@@ -1,5 +1,6 @@
 .idea/
 .svn/
-*/datasets/
-*/models/
-*/__pycache__/
+**/datasets/
+**/models/
+**/__pycache__/
+**/saved_models/
