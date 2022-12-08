@@ -1,14 +1,12 @@
 import tensorflow as tf
 
-from re_implementation.helpers import model_helper, dataset_helper
+from re_implementation import dataset_utils_EC
+from re_implementation.helpers import model_helper
+
 
 # todo training = True check
-
 # todo bernoulli and gasussian
 # todo logits clip value or give prob?
-
-# todo apply debiasing on training?
-# todo iw apply on train?
 
 """
 Notes:
@@ -22,20 +20,29 @@ for that paper too.
 
 # tf.config.run_functions_eagerly(True)
 
-continue_ckpt = True
+continue_ckpt = False
 checkpoint_epoch = '0004'
 
-dataset_type = 'grayscale'
-dataset = 'mnist'
+# dataset_type = 'grayscale'
+dataset_type = 'natural'
+
+# dataset = 'mnist'
+# dataset = 'fmnist'
+
+# dataset = 'cifar10'
+# dataset = 'svhn'
+dataset = 'gtsrb'
+
 decoder_dist = 'cBern'
+# decoder_dist = 'cat'
+
 method = 'BC-LL'
-val_split = 0.1
 epochs = 1000
 batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-x_train = dataset_helper.get_dataset(dataset, decoder_dist)
+x_train, x_val, _ = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type)
 
 if dataset_type == 'grayscale':
     num_filter = 32
@@ -80,13 +87,10 @@ checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
 
 cvae.fit(
     x=x_train,
-    y={
-        'reconstruction': x_train,
-        'kl_divergence': x_train
-    },
+    y={'reconstruction': x_train, 'kl_divergence': x_train},
+    validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
     batch_size=batch_size,
     epochs=epochs,
-    initial_epoch=checkpoint_epoch,
+    initial_epoch=int(checkpoint_epoch),
     callbacks=checkpoint_cb,
-    validation_split=val_split
 )

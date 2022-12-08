@@ -5,7 +5,7 @@ All dataset return normalised images with shape (32 x 32 x nc), nc = 1 for greys
 and 3 for RGB datasets.
 
 - Greyscale datasets: MNIST, FMNIST, EMNIST + Gray Noise
-- Color datasets: CIFAR10, SVHN_cropped, GTSRB + Color Noise
+- Natural datasets: CIFAR10, SVHN_cropped, GTSRB + Color Noise
 (CelebA gets a NonMatchingChecksumError which I have not been able to fix)
 
 To get the same training/validation split as in the paper use frac = 0.9 in the functions below.
@@ -29,6 +29,80 @@ from scipy import io
 import opendatasets as od
 import pandas as pd
 import tensorflow_probability as tfp
+
+
+# todo check if categorical labels explained in paper.
+# todo check transform_to_dataset() func.
+
+
+# todo use this example as reference to prepare datasets.
+def getValData(dataset):
+    if dataset == "mnist":
+        (ds_train, ds_val, ds_test), ds_info = tfds.load(
+            "mnist", split=['train[:90%]', 'train[90%:]', 'test'], with_info=True)
+
+        ds_val = ds_val.map(
+            partial(preprocess, inverted=False, mode='grayscale',
+                    normalize=_NORMALIZE.value, dequantize=False,
+                    visible_dist='cont_bernoulli'),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        ds_val = ds_val.cache()
+        ds_val = ds_val.batch(batch_size)
+        ds_val = ds_val.prefetch(tf.data.experimental.AUTOTUNE)
+
+
+def transform_to_dataset(x_train, x_val, x_test):
+    train_dataset = tf.data.Dataset.from_tensor_slices(x_train)
+    test_dataset = tf.data.Dataset.from_tensor_slices(x_val)
+    test_dataset = tf.data.Dataset.from_tensor_slices(x_test)
+    return train_dataset, test_dataset, test_dataset
+
+
+def get_dataset(dataset, decoder_dist, dataset_type):
+    if dataset_type == "grayscale":
+        if dataset == "mnist":
+            (train_images, _), (val_images, _), (test_images, _) = load_mnist(decoder_dist)
+
+        elif dataset == "fmnist":
+            (train_images, _), (val_images, _), (test_images, _) = load_fmnist(decoder_dist)
+
+        elif dataset == "emnist":
+            train_images = None
+            val_images = None
+            (train_images, _), (val_images, _), (test_images, _) = load_emnist(decoder_dist)
+
+        elif dataset == "gray_noise":
+            train_images = None
+            val_images = None
+            test_images = noise(purpose="test", type=dataset_type)
+
+        else:
+            raise NotImplementedError
+
+    elif dataset_type == "natural":
+        if dataset == "cifar10":
+            (train_images, _), (val_images, _), (test_images, _) = load_cifar10(decoder_dist)
+
+        elif dataset == "svhn":
+            (train_images, _), (val_images, _), (test_images, _) = load_svhn(decoder_dist)
+
+        elif dataset == "gtsrb":
+            train_images = None
+            val_images = None
+            (train_images, _), (val_images, _), (test_images, _) = load_gtrsb(decoder_dist)
+
+        elif dataset == "color_noise":
+            train_images = None
+            val_images = None
+            test_images = noise(purpose="test", type=dataset_type)
+
+        else:
+            raise NotImplementedError
+
+    else:
+        raise NotImplementedError
+
+    return train_images, val_images, test_images
 
 
 def resize(image_set):
@@ -67,7 +141,7 @@ def noise(purpose, type):
     return output
 
 
-def load_cifar10(frac=0.9):
+def load_cifar10(decoder_dist, frac=0.9):
     """Load CIFAR10 dataset and create training, validation and test sets.
   Args:
     frac: fraction of training data used for training
@@ -79,7 +153,13 @@ def load_cifar10(frac=0.9):
     print("The CIFAR dataset is being downloaded")
     (train_and_val_images, train_and_val_labels), (test_images, test_labels) = datasets.cifar10.load_data()
     print("The pixel values are normalized to be between 0 and 1")
-    train_and_val_images, test_images = train_and_val_images / 255.0, test_images / 255.0
+
+    if decoder_dist == "cBern":
+        train_and_val_images, test_images = train_and_val_images / 255.0, test_images / 255.0
+
+    elif decoder_dist == "cat":
+        train_and_val_images, test_images = tf.cast(train_and_val_images, tf.float32), tf.cast(test_images, tf.float32)
+
     class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
     n = len(train_and_val_labels)
@@ -93,7 +173,7 @@ def load_cifar10(frac=0.9):
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_mnist(frac=0.9):
+def load_mnist(decoder_dist, frac=0.9):
     """Load mnist dataset and create training, validation and test sets.
   Args:
     frac: fraction of training data used for training
@@ -113,15 +193,25 @@ def load_mnist(frac=0.9):
     val_images = train_and_val_images[cut:]
     val_labels = train_and_val_labels[cut:]
 
-    # Resize & Normalize images
-    train_images = resize(train_images) / 255
-    val_images = resize(val_images) / 255
-    test_images = resize(test_images) / 255
+    if decoder_dist == "cBern":
+        # Resize & Normalize images
+        train_images = resize(train_images) / 255
+        val_images = resize(val_images) / 255
+        test_images = resize(test_images) / 255
+
+    elif decoder_dist == "cat":
+        # Resize & Normalize images
+        train_images = resize(train_images)
+        val_images = resize(val_images)
+        test_images = resize(test_images)
+
+    else:
+        raise NotImplementedError
 
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_fmnist(frac=0.9):
+def load_fmnist(decoder_dist, frac=0.9):
     """Load fashion_mnist dataset and create training, validation and test sets.
   Args:
     frac: fraction of training data used for training
@@ -141,15 +231,22 @@ def load_fmnist(frac=0.9):
     val_images = train_and_val_images[cut:]
     val_labels = train_and_val_labels[cut:]
 
-    # Resize & Normalize images
-    train_images = resize(train_images) / 255
-    val_images = resize(val_images) / 255
-    test_images = resize(test_images) / 255
+    if decoder_dist == "cBern":
+        # Resize & Normalize images
+        train_images = resize(train_images) / 255
+        val_images = resize(val_images) / 255
+        test_images = resize(test_images) / 255
+
+    elif decoder_dist == "cat":
+        # Resize & Normalize images
+        train_images = resize(train_images)
+        val_images = resize(val_images)
+        test_images = resize(test_images)
 
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_emnist(frac=0.9):
+def load_emnist(decoder_dist, frac=0.9):
     """Load e_mnist letters dataset and create training, validation and test sets.
   Args:
     split: fraction of training data used for training
@@ -173,15 +270,22 @@ def load_emnist(frac=0.9):
     # max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
     # print("MAX",max)
 
-    # Resize & Normalize images
-    train_images = resize(train_images) / 255
-    val_images = resize(val_images) / 255
-    test_images = resize(test_images) / 255
+    if decoder_dist == "cBern":
+        # Resize & Normalize images
+        train_images = resize(train_images) / 255
+        val_images = resize(val_images) / 255
+        test_images = resize(test_images) / 255
+
+    elif decoder_dist == "cat":
+        # Resize & Normalize images
+        train_images = resize(train_images)
+        val_images = resize(val_images)
+        test_images = resize(test_images)
 
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_svhn(frac=0.9):
+def load_svhn(decoder_dist, frac=0.9):
     """Load svhn_cropped dataset and create training, validation and test sets.
 
   Args:
@@ -192,6 +296,11 @@ def load_svhn(frac=0.9):
     ds_test: test set
   """
     print("The SVHN_cropped dataset is being downloaded")
+    # todo easier/faster way to split dataset to train and val.
+    # train_images = tfds.load('svhn_cropped', split='train[:90%]', shuffle_files=True)
+    # val_images = tfds.load('svhn_cropped', split='train[90%:]', shuffle_files=True)
+    # test_images = tfds.load('svhn_cropped', split='test', shuffle_files=True)
+
     train_and_val_set = tfds.load('svhn_cropped', split='train', shuffle_files=True)
     test = tfds.load('svhn_cropped', split='test', shuffle_files=True)
 
@@ -210,19 +319,26 @@ def load_svhn(frac=0.9):
     val_images = train_and_val_images[cut:]
     val_labels = train_and_val_labels[cut:]
 
-    test_images = tf.convert_to_tensor(test_images, dtype=tf.int32, dtype_hint=None, name=None)
-    train_images = tf.convert_to_tensor(train_images, dtype=tf.int32, dtype_hint=None, name=None)
-    val_images = tf.convert_to_tensor(val_images, dtype=tf.int32, dtype_hint=None, name=None)
+    test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
+    train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
+    val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
 
-    # max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
-    # print("MAX",max)
+    max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
+    print("MAX", max)
 
-    # Normalize images (already 32 x32)
-    test_images = test_images / 255
-    train_images = train_images / 255
-    val_images = val_images / 255
+    if decoder_dist == "cBern":
+        # Normalize images (already 32 x32)
+        test_images = test_images / 255
+        train_images = train_images / 255
+        val_images = val_images / 255
 
-    return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+    elif decoder_dist == "cat":
+        # Normalize images (already 32 x32)
+        test_images = test_images
+        train_images = train_images
+        val_images = val_images
+
+    return (train_images, None), (val_images, None), (test_images, None)
 
 
 def load_celebA(frac=0.9):
@@ -257,7 +373,7 @@ def load_celebA(frac=0.9):
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_gtrsb(frac=0.9):
+def load_gtrsb(decoder_dist, frac=0.9):
     """Load gtrsb dataset from the given path and create training, validation and test sets.
   Source: https://medium.com/analytics-vidhya/cnn-german-traffic-signal-recognition-benchmarking-using-tensorflow-accuracy-80-d069b7996082
 
@@ -304,13 +420,19 @@ def load_gtrsb(frac=0.9):
     train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
     # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
     # print("MAX",max)
-    train_images = train_images / 255
 
     val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
-    val_images = val_images / 255
-
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
-    test_images = test_images / 255
+
+    if decoder_dist == "cBern":
+        train_images = train_images / 255
+        val_images = val_images / 255
+        test_images = test_images / 255
+
+    elif decoder_dist == "cat":
+        train_images = train_images
+        val_images = val_images
+        test_images = test_images
 
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
