@@ -38,7 +38,7 @@ def NRE(lamdas):
     return np.sum(elem_1 + elem_2 + elem_3)
 
 
-def analytical_bias_correction(VAE_ML, lamdas):
+def analytical_bias_correction(lamdas):
     """Bias Correction for Continuous Bernoulli visible distributions
   described in paragraph 3.1.
   Args:
@@ -67,11 +67,11 @@ def analytical_bias_correction(VAE_ML, lamdas):
     solution = result['x']
     evaluation = NRE(solution)
     # print('Solution: f(%s) = %.5f' % (solution, evaluation))
-    corrected_likelihood = VAE_ML - evaluation
-    return corrected_likelihood
+
+    return evaluation
 
 
-def algorithmic_bias_correction(training_set):
+def algorithmic_bias_correction(cvae, training_set):
     """PERHAPS THIS FUNCTION SHOULD BECOME A METHOD OF THE VAE CLASS...
   STRINGS AT LINES 95,96 102 SHOULD BE REPLACED WITH THE DEFINED CLASS METHODS
 
@@ -100,7 +100,7 @@ def algorithmic_bias_correction(training_set):
         counter_B = np.zero(256, nc)
 
         z = "forward pass of encoder on image"  # REPLACE string WITH CORRECT CLASS METHOD
-        decoded_x = "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
+        decoded_x = cvae.predict(image)["reconstruction"] # "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
 
         for k in range(nc):
             for i in range(32):
@@ -111,6 +111,9 @@ def algorithmic_bias_correction(training_set):
                     counter_B[v][k] += 1
 
         A += np.divide(B, counter_B)
+
+        # maybe this is enough?
+        A = tf.reduce_mean(cvae.predict(training_set)["reconstruction"])
 
     Correction = np.log(A / D)
     return Correction

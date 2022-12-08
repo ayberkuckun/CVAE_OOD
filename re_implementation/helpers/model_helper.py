@@ -174,6 +174,8 @@ class CVAE(tf.keras.Model):
         self.num_samples = num_samples
         self.decoder_dist = decoder_dist
 
+        self.appy_correction = appy_correction
+
         self.sampling = Sampling()
         self.encoder = Encoder(num_channel, num_filter, latent_dimensions)
         self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist)
@@ -221,7 +223,7 @@ class CVAE(tf.keras.Model):
             tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
         )
 
-        if appy_correction:
+        if self.appy_correction:
             debiasing_term = bias_helper.get_bias_correction_term("cBern")
             corrected_loss = loss - debiasing_term
         else:
@@ -238,7 +240,7 @@ class CVAE(tf.keras.Model):
             tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
         )
 
-        if appy_correction:
+        if self.appy_correction:
             debiasing_term = bias_helper.get_bias_correction_term("cat")
             corrected_loss = loss - debiasing_term
         else:

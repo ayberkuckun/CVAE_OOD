@@ -1,5 +1,5 @@
 def get_bias_correction_term(dist):
     if dist == "cBern":
-        pass
+        return 1
     elif dist == "cat":
-        pass
+        return 1

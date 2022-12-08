@@ -9,6 +9,20 @@ import itertools
 from absl import flags
 
 
+####### reference
+# in_sample = next(iter(x_val))
+# in_sample = np.expand_dims(in_sample, axis=0)
+# cvae.num_samples = 100
+# output = cvae.predict(in_sample)
+# output2 = cvae.predict(in_sample)
+# cvae.appy_correction = True
+# loss = cvae.continuous_bernoulli_loss(in_sample, output2['reconstruction'])
+# loss2 = cvae.kl_divergence_loss(in_sample, output2['kl_divergence'])
+# loss = loss + loss2 # label 1
+# loss2 = cvae.continuous_bernoulli_loss(out_sample, output2['reconstruction'])  # label 0
+############# thershold for loss etc?
+
+
 _NORMALIZE = flags.DEFINE_string(
     'normalize', default=None, help='Normalization to apply')
 

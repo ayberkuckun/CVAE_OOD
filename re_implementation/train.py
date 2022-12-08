@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 
 from re_implementation import dataset_utils_EC
@@ -23,15 +24,15 @@ for that paper too.
 continue_ckpt = False
 checkpoint_epoch = '0004'
 
-# dataset_type = 'grayscale'
-dataset_type = 'natural'
+dataset_type = 'grayscale'
+# dataset_type = 'natural'
 
-# dataset = 'mnist'
+dataset = 'mnist'
 # dataset = 'fmnist'
 
 # dataset = 'cifar10'
 # dataset = 'svhn'
-dataset = 'gtsrb'
+# dataset = 'gtsrb'
 
 decoder_dist = 'cBern'
 # decoder_dist = 'cat'
