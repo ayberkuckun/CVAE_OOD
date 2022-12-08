@@ -273,10 +273,10 @@ def load_gtrsb(frac=0.9):
     dataset_url = 'https://www.kaggle.com/meowmeowmeowmeowmeow/gtsrb-german-traffic-sign'
     od.download(dataset_url)
 
-    path = '/Users/eziocris/Documents/KTH/Advanced_DL/Project/vae_ood/gtsrb-german-traffic-sign/'
-    meta_df = pd.read_csv('~/Documents/KTH/Advanced_DL/Project/vae_ood/gtsrb-german-traffic-sign/Meta.csv')
-    test_data = pd.read_csv('~/Documents/KTH/Advanced_DL/Project/vae_ood/gtsrb-german-traffic-sign/Test.csv')
-    train_data = pd.read_csv('~/Documents/KTH/Advanced_DL/Project/vae_ood/gtsrb-german-traffic-sign/Train.csv')
+    path = './gtsrb-german-traffic-sign/'
+    meta_df = pd.read_csv('./gtsrb-german-traffic-sign/Meta.csv')
+    test_data = pd.read_csv('./gtsrb-german-traffic-sign/Test.csv')
+    train_data = pd.read_csv('./gtsrb-german-traffic-sign/Train.csv')
 
     train_and_val_part_1 = train_data["Path"].values
     train_and_val_image_paths = [path + part for part in train_and_val_part_1]
