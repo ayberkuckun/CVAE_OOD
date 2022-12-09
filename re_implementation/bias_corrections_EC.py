@@ -1,8 +1,5 @@
-"""This module implements functions to implement bias correction as described
-in paragraph 3.1 and algorithmic correction as described in paragraph 3.2
-
-OBS: PERHAPS THE ALGORITHMIC CORRECTION FUNCTION SHOULD BECOME A METHOD OF THE VAE CLASS,
-AND STRINGS AT CODE LINES 95,96 102 SHOULD BE REPLACED WITH THE PROPER DEFINED CLASS METHODS
+"""This module implements functions for the analytic (par.3.1) and algorithmic
+bias correction (par.3.2)
 """
 import numpy as np
 from scipy.optimize import minimize
@@ -25,7 +22,7 @@ def C(lmd):
     return np.divide(2 * np.arctanh(1 - 2 * lmd), 1 - 2 * lmd)
 
 
-def NRE(lamdas):
+def NRE_perfect(lamdas):
     """Negative reconstruction error (NRE) with perfect reconstruction
     calculated with formula (1)"""
     decoded_img = [0.5 if lmd == 0.5 else decoded_pix(lmd) for lmd in lamdas]
@@ -39,81 +36,81 @@ def NRE(lamdas):
 
 
 def analytical_bias_correction(lamdas):
-    """Bias Correction for Continuous Bernoulli visible distributions
+    """Bias Correction (per image) for Continuous Bernoulli visible distributions
   described in paragraph 3.1.
   Args:
-    -VAE_ML: uncorrected VAE likelyhood for a given image set, expected
-    array((D,),dtype= float) with D = number of images in data set;
-    -lambdas: shape parameters of the visbile Beurnoulli decoder for the data set,
-    expected np.array((D,R,C),dtype= float) with D as above, R= number of pixel raws of
-    image and C = number of pixel columns of image.
+    -lambdas: shape parameters of the visbile Beurnoulli decoder for the image,
+    expected np.array((r,c,nc),dtype= float) r = number of pixel raws of
+    image, c = number of pixel columns of image, nc = number of channels.
   Returns:
-    -corrected_likelihood: corrected likelyhood calculated with formula (3)
+    -evaluation: (scalar) correction for the likelyhood (per image) calculated with formula (3)
   """
     # Minimization of NRE with the respect of lmd using Nelder-Mead
     # Source: https://machinelearningmastery.com/how-to-use-nelder-mead-optimization-in-python/
-    d = lamdas.shape[0]
-    r = lamdas.shape[1]
-    c = lamdas.shape[2]
-    lmd_min, lmd_max = np.zeros((d, r, c)), np.ones((d, r, c))
+    r = lamdas.shape[0]
+    c = lamdas.shape[1]
+    nc = lamdas.shape[2]
+    lmd_min, lmd_max = np.zeros((r, c, nc)), np.ones((r, c, nc))
     # define the starting point as a random sample from the domain
-    pt = lmd_min + np.random.rand(d, r, c) * (lmd_max - lmd_min)
+    pt = lmd_min + np.random.rand(r, c, nc) * (lmd_max - lmd_min)
     # perform the search
-    result = minimize(NRE, pt, method='nelder-mead', options={'maxiter': 1000, 'maxfev': 1000})
+    result = minimize(NRE_perfect, pt, method='nelder-mead', options={'maxiter': 1000, 'maxfev': 1000})
     # summarize the result
     print('Status : %s' % result['message'])
     print('Total Evaluations: %d' % result['nfev'])
     # evaluate solution
     solution = result['x']
-    evaluation = NRE(solution)
+    evaluation = NRE_perfect(solution)
     # print('Solution: f(%s) = %.5f' % (solution, evaluation))
-
     return evaluation
 
 
 def algorithmic_bias_correction(cvae, training_set):
-    """PERHAPS THIS FUNCTION SHOULD BECOME A METHOD OF THE VAE CLASS...
-  STRINGS AT LINES 95,96 102 SHOULD BE REPLACED WITH THE DEFINED CLASS METHODS
-
-  Algorithmic Correction for Categorical visible distributions
-  described in paragraph 3.2
+    """Algorithmic Correction for Categorical visible distributions described in
+     paragraph 3.2
   Args:
-    -training set: set of images used for training, array((D, R,C,nc), dtype=float)),
+    -cvae model: trained model
+    -training set: set of images used for training cvae, array((D,R,C,nc), dtype=float)),
     D = number of images, R = number of raws, C = number of columns, nc = number of channels.
   Returns:
     -log correction factor: correction matrix calculated with algorithm 1,
     array((256, nc), dtype= float)
   """
+    if cvae.decoder_dist != "cat":
+        print("Decoder Distribution Error!")
+
     D = training_set.shape[0]
     nc = training_set.shape[3]
 
     # Correction matrix for the data set
-    Correction = np.array((256, nc), dtype=float)
+    Correction = tf.zeros((256, nc), dtype=float32)
 
     # Correction matrix for the images
-    A = np.array((256, nc), dtype=float)
-    counter_A = np.zero(256, nc)
+    A = tf.zeros((256, nc), dtype=float32)
 
     for image in training_set:
-        # Correction matrix for the pixels in an image
+        #Correction matrix for the pixels in an image
         B = np.array((256, nc), dtype=float)
-        counter_B = np.zero(256, nc)
+        counter_B = tf.zeros((256, nc), dtype= float32)
 
-        z = "forward pass of encoder on image"  # REPLACE string WITH CORRECT CLASS METHOD
-        decoded_x = cvae.predict(image)["reconstruction"] # "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
+        #z = "forward pass of encoder on image"  # REPLACE string WITH CORRECT CLASS METHOD
+        # "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
+        decoded_img = cvae.predict(image)["reconstruction"]
 
+        reconstruction = tf.reshape(decoded_img, (self.num_samples, -1, 32, 32, self.num_channel, 256))
+        lp_x_z = tfp.distributions.Categorical(logits=reconstruction).log_prob(image)
+
+        #Algorithm 1
         for k in range(nc):
-            for i in range(32):
-                for j in range(32):
-                    v = decoded_x[i][j][k]
-                    B[v][
-                        k] += "value of the decoder categorical distribution at the pixel [i][j][k]"  # REPLACE string WITH CORRECT CLASS METHOD
-                    counter_B[v][k] += 1
+            for v in range(256):
+                indexes = tf.where(decoded_img[:,:,k] == v)
+                B[v][k] = tf.reduce_sum(lp_x_z[indexes])
+                counter_B[v][k] += tf.set.size(indexes)
 
-        A += np.divide(B, counter_B)
+        A += tf.divide(B, counter_B)
 
-        # maybe this is enough?
-        A = tf.reduce_mean(cvae.predict(training_set)["reconstruction"])
+    #maybe this is enough? amswer: see above
+    #Correction = tf.reduce_mean(cvae.predict(training_set)["reconstruction"])
 
     Correction = np.log(A / D)
     return Correction
