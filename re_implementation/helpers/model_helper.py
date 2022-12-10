@@ -52,9 +52,9 @@ class Encoder(tf.keras.Model):
         x = self.relu3(x)
 
         z_mean = self.conv_layer4_mean(x)
-        z_log_var = self.conv_layer4_var(x)
+        z_sigma = self.conv_layer4_var(x)
 
-        return z_mean, z_log_var
+        return z_mean, z_sigma
 
     def get_config(self):
         config = super(Encoder, self).get_config()
@@ -153,8 +153,8 @@ class Sampling(tf.keras.layers.Layer):
         super(Sampling, self).__init__(name=name, **kwargs)
 
     def call(self, inputs, num_samples):
-        z_mean, z_log_var = inputs
-        z = tfp.distributions.Normal(loc=z_mean, scale=z_log_var).sample(num_samples)
+        z_mean, z_sigma = inputs
+        z = tfp.distributions.Normal(loc=z_mean, scale=z_sigma).sample(num_samples)
         z = tf.reshape(z, (-1, z.shape[2], z.shape[3], z.shape[4]))
         return z
 
@@ -181,8 +181,8 @@ class CVAE(tf.keras.Model):
         self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist)
 
     def call(self, inputs):
-        z_mean, z_log_var = self.encoder(inputs)
-        z = self.sampling((z_mean, z_log_var), self.num_samples)
+        z_mean, z_sigma = self.encoder(inputs)
+        z = self.sampling((z_mean, z_sigma), self.num_samples)
         reconstruction = self.decoder(z)
 
         z = tf.reshape(z, (self.num_samples, -1, 1, 1, self.latent_dimensions))
@@ -190,11 +190,11 @@ class CVAE(tf.keras.Model):
         z_mean_broadcasted = tf.expand_dims(z_mean, axis=0)
         z_mean_broadcasted = tf.repeat(z_mean_broadcasted, repeats=[self.num_samples], axis=0)
 
-        z_log_var_broadcasted = tf.expand_dims(z_log_var, axis=0)
-        z_log_var_broadcasted = tf.repeat(z_log_var_broadcasted, repeats=[self.num_samples], axis=0)
+        z_sigma_broadcasted = tf.expand_dims(z_sigma, axis=0)
+        z_sigma_broadcasted = tf.repeat(z_sigma_broadcasted, repeats=[self.num_samples], axis=0)
 
         return {'reconstruction': reconstruction,
-                'kl_divergence': tf.stack([z_mean_broadcasted, z_log_var_broadcasted, z])
+                'kl_divergence': tf.stack([z_mean_broadcasted, z_sigma_broadcasted, z])
                 }
 
     def get_config(self):
@@ -261,9 +261,9 @@ class CVAE(tf.keras.Model):
         return loss_func
 
     def kl_divergence_loss(self, x_true, z_stack):
-        z_mean, z_log_var, z = tf.unstack(z_stack)
+        z_mean, z_sigma, z = tf.unstack(z_stack)
 
-        lq_z_x = tfp.distributions.Normal(loc=z_mean, scale=z_log_var).log_prob(z)
+        lq_z_x = tfp.distributions.Normal(loc=z_mean, scale=z_sigma).log_prob(z)
         lp_z = tfp.distributions.Normal(loc=0, scale=1).log_prob(z)
 
         loss = tf.reduce_logsumexp(tf.reduce_sum(lp_z - lq_z_x, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
