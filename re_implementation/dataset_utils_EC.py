@@ -111,11 +111,12 @@ def resize(image_set):
     return resized_output
 
 
-def noise(purpose, type):
+def noise(purpose, type, dist):
     """Noise Generator
   Args:
     purpose: "train", "val" or "test"
     type: "grayscale" or "color"
+    dist: "cBern" or "cat"
   Returns:
     output: list of 10000 noise images
   """
@@ -135,7 +136,15 @@ def noise(purpose, type):
         output = [np.random.randint(low=0, high=256, size=(32, 32, 3)) for i in range(10000)]
 
     output = tf.convert_to_tensor(output, dtype=tf.float32, dtype_hint=None, name=None)
-    output = output / 256
+
+    if dist =="cat":
+        return output
+
+    if dist == "cBern":
+        output = output / 256
+
+    else:
+        raise NotImplementedError
 
     return output
 
