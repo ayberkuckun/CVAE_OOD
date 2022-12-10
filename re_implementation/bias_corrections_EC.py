@@ -1,5 +1,5 @@
-"""This module implements functions for the analytic (par.3.1) and algorithmic
-bias correction (par.3.2)
+"""This module implements functions to calculate bias corrections per image adopting
+the analytic (par.3.1) and algorithmic (par.3.2) approaches
 """
 import numpy as np
 from scipy.optimize import minimize
@@ -7,6 +7,41 @@ from numpy.random import rand
 import tensorflow as tf
 import itertools
 
+def get_bias_corrected_lkl(cvae, image, training_set):
+    """Returns the bias Correction per image for Continuous Bernoulli and categorical
+    visible distributions.
+    Args:
+    -cvae: trained model
+    -image: test image which requires bias correction, array((R,C,nc), dtype=float)),
+    R = number of raws, C = number of columns, nc = number of channels
+    -training_set: set of images used for training cvae, array((D,R,C,nc), dtype=float)),
+    with D = number of images
+    Returns:
+    -correction: (scalar)likelyhood correction (per image) calculated with analytical
+    (for "cBern") or algorithmical (for "cat") approach
+    """
+    r = image.shape[0]
+    c = image.shape[1]
+    nc = image.shape[2]
+
+    if cvae.decoder_dist == "cBern":
+        lamdas = tf.math.sigmoid(cvae.predict(image)["reconstruction"])
+        correction = analytical_bias_correction(lamdas)
+
+    if cvae.decoder_dist == "cat":
+        pix_corrections = algorithmic_bias_correction(cvae, training_set)
+        corrections = np.zeros((r, c, nc), dtype=float)
+
+        for k in range(nc):
+            for i in range(32):
+                for j in range(32):
+                    x = int(image[i][j][k])
+                    corrections [i,j,k]= pix_corrections[x][k]
+        correction = np.mean(corrections)
+
+    else:
+        print("Decoder Distribution Not supported!")
+    return correction
 
 def decoded_pix(lmd):
     """Calculation of decoded pixel when the value of lmd is different from 0.5
@@ -15,12 +50,10 @@ def decoded_pix(lmd):
     elem_2 = np.divide(1, 2 * np.arctanh(1 - 2 * lmd))
     return elem_1 + elem_2
 
-
 def C(lmd):
     """Calculation of C(lmd), see fomula at
     https://en.wikipedia.org/wiki/Continuous_Bernoulli_distribution"""
     return np.divide(2 * np.arctanh(1 - 2 * lmd), 1 - 2 * lmd)
-
 
 def NRE_perfect(lamdas):
     """Negative reconstruction error (NRE) with perfect reconstruction
@@ -33,7 +66,6 @@ def NRE_perfect(lamdas):
     elem_2 = decoded_img * np.log(lamdas)
     elem_3 = (1 - decoded_img) * np.log(1 - lamdas)
     return np.sum(elem_1 + elem_2 + elem_3)
-
 
 def analytical_bias_correction(lamdas):
     """Bias Correction (per image) for Continuous Bernoulli visible distributions
@@ -64,14 +96,13 @@ def analytical_bias_correction(lamdas):
     # print('Solution: f(%s) = %.5f' % (solution, evaluation))
     return evaluation
 
-
 def algorithmic_bias_correction(cvae, training_set):
     """Algorithmic Correction for Categorical visible distributions described in
      paragraph 3.2
   Args:
-    -cvae model: trained model
+    -cvae: trained model
     -training set: set of images used for training cvae, array((D,R,C,nc), dtype=float)),
-    D = number of images, R = number of raws, C = number of columns, nc = number of channels.
+    D = number of images, R = number of raws, C = number of columns, nc = number of channels
   Returns:
     -log correction factor: correction matrix calculated with algorithm 1,
     array((256, nc), dtype= float)
@@ -83,15 +114,15 @@ def algorithmic_bias_correction(cvae, training_set):
     nc = training_set.shape[3]
 
     # Correction matrix for the data set
-    Correction = tf.zeros((256, nc), dtype=float32)
+    Correction = tf.zeros((256, nc), dtype=tf.float32)
 
     # Correction matrix for the images
-    A = tf.zeros((256, nc), dtype=float32)
+    A = tf.zeros((256, nc), dtype=tf.float32)
 
     for image in training_set:
         #Correction matrix for the pixels in an image
-        B = np.array((256, nc), dtype=float)
-        counter_B = tf.zeros((256, nc), dtype= float32)
+        B = np.zeros((256, nc), dtype=float32)
+        counter_B = np.ones((256, nc), dtype= np.float)
 
         #z = "forward pass of encoder on image"  # REPLACE string WITH CORRECT CLASS METHOD
         # "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
@@ -107,10 +138,13 @@ def algorithmic_bias_correction(cvae, training_set):
                 B[v][k] = tf.reduce_sum(lp_x_z[indexes])
                 counter_B[v][k] += tf.set.size(indexes)
 
-        A += tf.divide(B, counter_B)
+        counter_B = tf.convert_to_tensor([x-1 for x in counter_B if x>1])
+        B = tf.convert_to_tensor(B)
+
+        A += tf.math.divide(B, counter_B)
 
     #maybe this is enough? amswer: see above
     #Correction = tf.reduce_mean(cvae.predict(training_set)["reconstruction"])
 
-    Correction = np.log(A / D)
+    Correction = tf.math.divide(A, D)
     return Correction
