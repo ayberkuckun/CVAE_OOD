@@ -27,10 +27,10 @@ checkpoint_epoch = '0004'
 dataset_type = 'grayscale'
 # dataset_type = 'natural'
 
-dataset = 'mnist'
+# dataset = 'mnist'
 # dataset = 'fmnist'
 
-# dataset = 'cifar10'
+dataset = 'cifar10'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
