@@ -32,12 +32,10 @@ def get_bias_corrected_lkl(cvae, image, training_set):
         pix_corrections = algorithmic_bias_correction(cvae, training_set)
         corrections = np.zeros((r, c, nc), dtype=float)
 
-        for k in range(nc):
-            for i in range(32):
-                for j in range(32):
-                    x = int(image[i][j][k])
-                    corrections [i,j,k]= pix_corrections[x][k]
-        correction = np.mean(corrections)
+    for k in range(nc):
+        for i in range(256):
+            corrections[..., k][(output[..., k] == i).numpy()] = pix_corrections[i, k]
+    correction = np.mean(corrections)
 
     else:
         print("Decoder Distribution Not supported!")
