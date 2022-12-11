@@ -10,8 +10,6 @@ and 3 for RGB datasets.
 
 To get the same training/validation split as in the paper use frac = 0.9 in the functions below.
 The noise generator simply generates 1000 samples of required noise (greyscale or color).
-
-OBS: contrast normalization function (per image) is separated from get_dataset and needs to be called as required
 """
 
 import csv
@@ -59,7 +57,7 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
-def get_dataset(dataset, decoder_dist, dataset_type):
+def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize = False):
     if dataset_type == "grayscale":
         if dataset == "mnist":
             (train_images, _), (val_images, _), (test_images, _) = load_mnist(decoder_dist)
@@ -102,6 +100,13 @@ def get_dataset(dataset, decoder_dist, dataset_type):
 
     else:
         raise NotImplementedError
+
+    if contrast_normalize:
+        train_images = tf.map_fn(contrast_normalization, train_images)
+        val_images = tf.map_fn(contrast_normalization, val_images)
+        test_images = tf.map_fn(contrast_normalization, test_images)
+    else:
+        continue
 
     return train_images, val_images, test_images
 
