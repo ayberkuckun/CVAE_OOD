@@ -28,14 +28,20 @@ def get_bias_corrected_lkl(cvae, image, training_set):
         lamdas = tf.math.sigmoid(cvae.predict(image)["reconstruction"])
         correction = analytical_bias_correction(lamdas)
 
-    if cvae.decoder_dist == "cat":
+    elif cvae.decoder_dist == "cat":
         pix_corrections = algorithmic_bias_correction(cvae, training_set)
         corrections = np.zeros((r, c, nc), dtype=float)
 
-    for k in range(nc):
-        for i in range(256):
-            corrections[..., k][(output[..., k] == i).numpy()] = pix_corrections[i, k]
-    correction = np.mean(corrections)
+        for k in range(nc):
+            for i in range(r):
+                for j in range(c):
+                    x = int(output[i][j][k])
+                    corrections[i,j,k] = pix_corrections[x][k]
+
+        #for k in range(nc):
+        #    for i in range(256):
+        #        corrections[..., k][(output[..., k] == i).numpy()] = pix_corrections[i, k]
+        correction = np.mean(corrections)
 
     else:
         print("Decoder Distribution Not supported!")
