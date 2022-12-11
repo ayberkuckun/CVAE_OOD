@@ -73,7 +73,7 @@ def get_dataset(dataset, decoder_dist, dataset_type):
         elif dataset == "gray_noise":
             train_images = None
             val_images = None
-            test_images = noise(purpose="test", type=dataset_type)
+            test_images = noise(purpose="test", type=dataset_type, dist=decoder_dist)
 
         else:
             raise NotImplementedError
@@ -93,7 +93,7 @@ def get_dataset(dataset, decoder_dist, dataset_type):
         elif dataset == "color_noise":
             train_images = None
             val_images = None
-            test_images = noise(purpose="test", type=dataset_type)
+            test_images = noise(purpose="test", type=dataset_type, dist=decoder_dist)
 
         else:
             raise NotImplementedError
