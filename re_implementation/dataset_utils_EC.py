@@ -10,6 +10,8 @@ and 3 for RGB datasets.
 
 To get the same training/validation split as in the paper use frac = 0.9 in the functions below.
 The noise generator simply generates 1000 samples of required noise (greyscale or color).
+
+OBS: contrast normalization function (per image) is separated from get_dataset and needs to be called as required
 """
 
 import csv
