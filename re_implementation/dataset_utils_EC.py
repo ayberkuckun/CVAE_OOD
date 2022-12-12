@@ -105,8 +105,8 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize = False)
         train_images = tf.map_fn(contrast_normalization, train_images)
         val_images = tf.map_fn(contrast_normalization, val_images)
         test_images = tf.map_fn(contrast_normalization, test_images)
-    else:
-        continue
+    #else:
+        #continue
 
     return train_images, val_images, test_images
 
