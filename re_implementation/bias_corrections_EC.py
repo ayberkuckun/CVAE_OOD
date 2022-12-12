@@ -160,15 +160,14 @@ def algorithmic_bias_correction(cvae, training_set):
         decoded_img = cvae.predict(image)["reconstruction"]
 
         reconstruction = tf.reshape(decoded_img, (cvae.num_samples, -1, 32, 32, cvae.num_channel, 256))
+        reconstruction = reconstruction.numpy()
+
         lp_x_z = tfp.distributions.Categorical(logits=reconstruction).log_prob(image)
         lp_x_z = lp_x_z.numpy()
 
         print("TEST LP_X_Z", lp_x_z.shape)
         print("TEST rec", reconstruction.shape)
-        #print("TEST decodec", decoded_img.shape)
-        reconstruction_2 = reconstruction[:,:,:,:,:,-1]
-        print("TEST recon_2", reconstruction_2.shape)
-        reconstruction_2 = reconstruction_2.numpy()
+        #print("TEST bis", lp_x_z)
 
         #Algorithm 1
         for k in range(nc):
@@ -176,7 +175,7 @@ def algorithmic_bias_correction(cvae, training_set):
                 #indexes = tf.where(reconstruction_2[:,:,k] == v)
                 #B[v][k] = tf.sum(lp_x_z[indexes])
                 #counter_B[v][k] += tf.set.size(indexes)
-                indexes = np.where(reconstruction_2[:,:,k] == v)
+                indexes = np.where(np.argmax(reconstruction[:,:,:,:,k,:], axis = 4) == v)
                 B[v][k] = np.sum(lp_x_z[indexes])
                 counter_B[v][k] += len(indexes)
 
