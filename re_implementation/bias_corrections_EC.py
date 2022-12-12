@@ -6,6 +6,7 @@ from scipy.optimize import minimize
 from numpy.random import rand
 import tensorflow as tf
 import itertools
+import tensorflow_probability as tfp
 
 def get_bias_corrected_lkl(cvae, image, training_set):
     """Returns the bias Correction per image for Continuous Bernoulli and categorical
@@ -20,12 +21,28 @@ def get_bias_corrected_lkl(cvae, image, training_set):
     -correction: (scalar)likelyhood correction (per image) calculated with analytical
     (for "cBern") or algorithmical (for "cat") approach
     """
-    r = image.shape[0]
-    c = image.shape[1]
-    nc = image.shape[2]
+    #print("VERIFICATION", image.shape)
+
+    r = image.shape[1]
+    c = image.shape[2]
+    nc = image.shape[3]
 
     if cvae.decoder_dist == "cBern":
         lamdas = tf.math.sigmoid(cvae.predict(image)["reconstruction"])
+
+        #if tf.math.reduce_min(lamdas)<=0:
+        #    print("ERROR: negative or zero lamda!")
+        #if tf.math.reduce_max(lamdas)>=1:
+        #    print("ERROR: too big lamda!")
+
+        lamdas = tf.clip_by_value(lamdas, 1e-10, 1-1e-10, name=None)
+        MIN = tf.math.reduce_min(lamdas)
+        MAX = tf.math.reduce_max(lamdas)
+
+        #print('LAMDA', lamdas.shape)
+        #print("MIN", MIN)
+        #print("MAX", MAX)
+
         correction = analytical_bias_correction(lamdas)
 
     elif cvae.decoder_dist == "cat":
@@ -35,7 +52,7 @@ def get_bias_corrected_lkl(cvae, image, training_set):
         for k in range(nc):
             for i in range(r):
                 for j in range(c):
-                    x = int(output[i][j][k])
+                    x = int(image[0][i][j][k])
                     corrections[i,j,k] = pix_corrections[x][k]
 
         #for k in range(nc):
@@ -50,6 +67,12 @@ def get_bias_corrected_lkl(cvae, image, training_set):
 def decoded_pix(lmd):
     """Calculation of decoded pixel when the value of lmd is different from 0.5
     (formula at the bottom of the left column in page 3)"""
+
+    #if tf.math.reduce_min(1 - 2 * lmd)<= -1:
+    #    print("ERROR: arctanh not defined for values < -1")
+    #if tf.math.reduce_max(1 - 2 * lmd)>=1:
+    #    print("ERROR: arctanh not defined for values > 1")
+
     elem_1 = np.divide(lmd, 2 * lmd - 1)
     elem_2 = np.divide(1, 2 * np.arctanh(1 - 2 * lmd))
     return elem_1 + elem_2
@@ -86,7 +109,8 @@ def analytical_bias_correction(lamdas):
     r = lamdas.shape[0]
     c = lamdas.shape[1]
     nc = lamdas.shape[2]
-    lmd_min, lmd_max = np.zeros((r, c, nc)), np.ones((r, c, nc))
+    #lmd_min, lmd_max = np.zeros((r, c, nc)), np.ones((r, c, nc))
+    lmd_min, lmd_max = 1e-10*np.ones((r, c, nc)), (1-1e-10)*np.ones((r, c, nc))
     # define the starting point as a random sample from the domain
     pt = lmd_min + np.random.rand(r, c, nc) * (lmd_max - lmd_min)
     # perform the search
@@ -94,10 +118,11 @@ def analytical_bias_correction(lamdas):
     # summarize the result
     print('Status : %s' % result['message'])
     print('Total Evaluations: %d' % result['nfev'])
+    print('Solution: %s' % result['x'])
     # evaluate solution
     solution = result['x']
     evaluation = NRE_perfect(solution)
-    # print('Solution: f(%s) = %.5f' % (solution, evaluation))
+    #print('Solution: f(%s) = %.5f' % (solution, evaluation))
     return evaluation
 
 def algorithmic_bias_correction(cvae, training_set):
@@ -118,37 +143,55 @@ def algorithmic_bias_correction(cvae, training_set):
     nc = training_set.shape[3]
 
     # Correction matrix for the data set
-    Correction = tf.zeros((256, nc), dtype=tf.float32)
+    #Correction = tf.zeros((256, nc), dtype=tf.float32)
+    Correction = np.zeros((256, nc), dtype=float)
 
     # Correction matrix for the images
-    A = tf.zeros((256, nc), dtype=tf.float32)
+    #A = tf.zeros((256, nc), dtype=tf.float32)
+    A = np.zeros((256, nc), dtype=float)
 
     for image in training_set:
         #Correction matrix for the pixels in an image
-        B = np.zeros((256, nc), dtype=float32)
-        counter_B = np.ones((256, nc), dtype= np.float)
-
+        B = np.zeros((256, nc), dtype=float)
+        counter_B = np.ones((256, nc), dtype= float)
+        image = tf.expand_dims(image, axis=0)
         #z = "forward pass of encoder on image"  # REPLACE string WITH CORRECT CLASS METHOD
         # "forward pass of decoder on the above z"  # REPLACE string WITH CORRECT CLASS METHOD
         decoded_img = cvae.predict(image)["reconstruction"]
 
-        reconstruction = tf.reshape(decoded_img, (self.num_samples, -1, 32, 32, self.num_channel, 256))
+        reconstruction = tf.reshape(decoded_img, (cvae.num_samples, -1, 32, 32, cvae.num_channel, 256))
         lp_x_z = tfp.distributions.Categorical(logits=reconstruction).log_prob(image)
+        lp_x_z = lp_x_z.numpy()
+
+        print("TEST LP_X_Z", lp_x_z.shape)
+        print("TEST rec", reconstruction.shape)
+        #print("TEST decodec", decoded_img.shape)
+        reconstruction_2 = reconstruction[:,:,:,:,:,-1]
+        print("TEST recon_2", reconstruction_2.shape)
+        reconstruction_2 = reconstruction_2.numpy()
 
         #Algorithm 1
         for k in range(nc):
             for v in range(256):
-                indexes = tf.where(decoded_img[:,:,k] == v)
-                B[v][k] = tf.reduce_sum(lp_x_z[indexes])
-                counter_B[v][k] += tf.set.size(indexes)
+                #indexes = tf.where(reconstruction_2[:,:,k] == v)
+                #B[v][k] = tf.sum(lp_x_z[indexes])
+                #counter_B[v][k] += tf.set.size(indexes)
+                indexes = np.where(reconstruction_2[:,:,k] == v)
+                B[v][k] = np.sum(lp_x_z[indexes])
+                counter_B[v][k] += len(indexes)
 
-        counter_B = tf.convert_to_tensor([x-1 for x in counter_B if x>1])
-        B = tf.convert_to_tensor(B)
+        #print("PROVA B Counter", B.shape, counter_B)
+        #counter_B = tf.convert_to_tensor([x-1 for x in counter_B if x>1])
+        #B = tf.convert_to_tensor(B)
+            counter_B[:,k] = [x-1 for x in counter_B[:,k] if x>1]
 
-        A += tf.math.divide(B, counter_B)
+        #A += tf.math.divide(B, counter_B)
+        A += np.divide(B, counter_B)
 
     #maybe this is enough? amswer: see above
     #Correction = tf.reduce_mean(cvae.predict(training_set)["reconstruction"])
 
-    Correction = tf.math.divide(A, D)
+    #Correction = tf.math.divide(A, D)
+    Correction = np.divide(A, D)
+    Correction = tf.convert_to_tensor(Correction)
     return Correction
