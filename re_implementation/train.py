@@ -19,6 +19,7 @@ for that paper too.
 4) They only apply importance weighting on evaluation.
 """
 
+# tf.keras.mixed_precision.set_global_policy('mixed_float16')
 # tf.config.run_functions_eagerly(True)
 
 continue_ckpt = False
@@ -27,10 +28,10 @@ checkpoint_epoch = '0004'
 dataset_type = 'grayscale'
 # dataset_type = 'natural'
 
-# dataset = 'mnist'
+dataset = 'mnist'
 # dataset = 'fmnist'
 
-dataset = 'cifar10'
+# dataset = 'cifar10'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 

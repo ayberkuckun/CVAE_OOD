@@ -3,8 +3,6 @@ import tensorflow_probability as tfp
 
 from re_implementation.helpers import bias_helper
 
-appy_correction = False
-
 
 class Encoder(tf.keras.Model):
     def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, name="encoder", **kwargs):
@@ -28,12 +26,12 @@ class Encoder(tf.keras.Model):
         self.relu3 = tf.keras.layers.ReLU()
 
         self.conv_layer4_mean = tf.keras.layers.Conv2D(
-            filters=latent_dimensions, kernel_size=4, strides=1, padding="valid"
+            filters=latent_dimensions, kernel_size=4, strides=1, padding="valid", dtype='float32'
         )
         self.conv_layer4_var = tf.keras.layers.Conv2D(
             filters=latent_dimensions, kernel_size=4,
             strides=1, activation=tf.keras.activations.softplus,
-            padding="valid"
+            padding="valid", dtype='float32'
         )
 
     def call(self, inputs):
@@ -101,13 +99,13 @@ class Decoder(tf.keras.Model):
 
         if decoder_dist == "cBern":
             self.deconv_layer4 = tf.keras.layers.Conv2DTranspose(filters=num_channel, kernel_size=4, strides=2,
-                                                                 padding="same")
-            self.reshape_layer = tf.keras.layers.Reshape(target_shape=(32, 32, num_channel))
+                                                                 padding="same", dtype='float32')
+            self.reshape_layer = tf.keras.layers.Reshape(target_shape=(32, 32, num_channel), dtype='float32')
 
         elif decoder_dist == "cat":
             self.deconv_layer4 = tf.keras.layers.Conv2DTranspose(filters=num_channel * 256, kernel_size=4, strides=2,
-                                                                 padding="same")
-            self.reshape_layer = tf.keras.layers.Reshape(target_shape=(32, 32, num_channel, 256))
+                                                                 padding="same", dtype='float32')
+            self.reshape_layer = tf.keras.layers.Reshape(target_shape=(32, 32, num_channel, 256), dtype='float32')
 
         else:
             raise ValueError("Undefined Decoder Output Distribution.")
@@ -150,7 +148,7 @@ class Decoder(tf.keras.Model):
 
 class Sampling(tf.keras.layers.Layer):
     def __init__(self, name="sampling", **kwargs):
-        super(Sampling, self).__init__(name=name, **kwargs)
+        super(Sampling, self).__init__(name=name, dtype='float32', **kwargs)
 
     def call(self, inputs, num_samples):
         z_mean, z_sigma = inputs
@@ -174,7 +172,7 @@ class CVAE(tf.keras.Model):
         self.num_samples = num_samples
         self.decoder_dist = decoder_dist
 
-        self.appy_correction = appy_correction
+        self.appy_correction = False
 
         self.sampling = Sampling()
         self.encoder = Encoder(num_channel, num_filter, latent_dimensions)
