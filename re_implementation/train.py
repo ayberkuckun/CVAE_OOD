@@ -37,13 +37,19 @@ dataset = 'mnist'
 # decoder_dist = 'cBern'
 decoder_dist = 'cat'
 
-method = 'BC-LL'
 epochs = 1000
 batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type)
+contrast_normalize = False
+
+if contrast_normalize:
+    method = 'BC-LL-CS'
+else:
+    method = 'BC-LL-no-CS'
+
+x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
 
 if dataset_type == 'grayscale':
     num_filter = 32

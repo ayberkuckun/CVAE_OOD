@@ -57,7 +57,7 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
-def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize = False):
+def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
     if dataset_type == "grayscale":
         if dataset == "mnist":
             (train_images, _), (val_images, _), (test_images, _) = load_mnist(decoder_dist)
