@@ -1,9 +1,7 @@
-import numpy as np
 import tensorflow as tf
 
 from re_implementation import dataset_utils_EC
 from re_implementation.helpers import model_helper
-
 
 # todo training = True check
 # todo bernoulli and gasussian
@@ -22,8 +20,9 @@ for that paper too.
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
 # tf.config.run_functions_eagerly(True)
 
+train = True
 continue_ckpt = False
-checkpoint_epoch = '0004'
+checkpoint_epoch = '0962'
 
 dataset_type = 'grayscale'
 # dataset_type = 'natural'
@@ -35,8 +34,8 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-decoder_dist = 'cBern'
-# decoder_dist = 'cat'
+# decoder_dist = 'cBern'
+decoder_dist = 'cat'
 
 method = 'BC-LL'
 epochs = 1000
@@ -44,7 +43,7 @@ batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-x_train, x_val, _ = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type)
+x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type)
 
 if dataset_type == 'grayscale':
     num_filter = 32
@@ -66,7 +65,7 @@ cvae = model_helper.CVAE(
 )
 
 if continue_ckpt:
-    cvae.load_weights(f'saved_models/{decoder_dist}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
+    cvae.load_weights(f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
 else:
     checkpoint_epoch = 0
 
@@ -80,19 +79,31 @@ cvae.compile(
           'kl_divergence': cvae.kl_divergence_loss}
 )
 
-checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-    filepath=f'saved_models/{decoder_dist}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
-    monitor='val_loss',
-    save_best_only=True,
-    save_weights_only=True
-)
+if train:
+    checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
+        filepath=f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
+        monitor='val_loss',
+        save_best_only=True,
+        save_weights_only=True,
+        verbose=1
+    )
 
-cvae.fit(
-    x=x_train,
-    y={'reconstruction': x_train, 'kl_divergence': x_train},
-    validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
-    batch_size=batch_size,
-    epochs=epochs,
-    initial_epoch=int(checkpoint_epoch),
-    callbacks=checkpoint_cb,
-)
+    cvae.fit(
+        x=x_train,
+        y={'reconstruction': x_train, 'kl_divergence': x_train},
+        validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
+        batch_size=batch_size,
+        epochs=epochs,
+        initial_epoch=int(checkpoint_epoch),
+        callbacks=checkpoint_cb,
+        verbose=1
+    )
+
+    print("Now, you can load the best model and then evaluate on test with 'train=False' and 'continue_ckpt=True'.")
+
+else:
+    cvae.evaluate(
+        x=x_test,
+        y={'reconstruction': x_test, 'kl_divergence': x_test},
+        batch_size=batch_size,
+    )
