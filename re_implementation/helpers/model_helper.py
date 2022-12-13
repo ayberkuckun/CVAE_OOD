@@ -34,7 +34,7 @@ class Encoder(tf.keras.Model):
             padding="valid", dtype='float32'
         )
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         x = self.input_layer(inputs)
 
         x = self.conv_layer1(x)
@@ -110,7 +110,7 @@ class Decoder(tf.keras.Model):
         else:
             raise ValueError("Undefined Decoder Output Distribution.")
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         x = self.input_layer(inputs)
 
         x = self.deconv_layer1(x)
@@ -178,10 +178,10 @@ class CVAE(tf.keras.Model):
         self.encoder = Encoder(num_channel, num_filter, latent_dimensions)
         self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist)
 
-    def call(self, inputs):
-        z_mean, z_sigma = self.encoder(inputs)
+    def call(self, inputs, training=None):
+        z_mean, z_sigma = self.encoder(inputs, training=training)
         z = self.sampling((z_mean, z_sigma), self.num_samples)
-        reconstruction = self.decoder(z)
+        reconstruction = self.decoder(z, training=training)
 
         z = tf.reshape(z, (self.num_samples, -1, 1, 1, self.latent_dimensions))
 

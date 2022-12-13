@@ -7,6 +7,8 @@ from re_implementation.helpers import model_helper
 # todo bernoulli and gasussian
 # todo logits clip value or give prob?
 
+# todo instance normalization layers
+
 """
 Notes:
 1) Tensorflow 2 is not clear enough.
