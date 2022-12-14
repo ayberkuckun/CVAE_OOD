@@ -12,3 +12,4 @@ tqdm==4.63.0
 opencv-python
 emnist
 opendatasets
+tensorflow-addons

@@ -1,28 +1,46 @@
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+import tensorflow_addons as tfa
 
 from re_implementation.helpers import bias_helper
 
 
 class Encoder(tf.keras.Model):
-    def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, name="encoder", **kwargs):
+    def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, normalization="batch", name="encoder",
+                 **kwargs):
         super(Encoder, self).__init__(name=name, **kwargs)
         self.num_channel = num_channel
         self.num_filter = num_filter
         self.latent_dimensions = latent_dimensions
+        self.normalization = normalization
+
+        if normalization == "batch":
+            self.normalization_layer = tf.keras.layers.BatchNormalization
+            kwargs_list = {}
+        elif normalization == "instance":
+            self.normalization_layer = tfa.layers.InstanceNormalization
+            kwargs_list = {
+                "center": True,
+                "scale": True,
+                "beta_initializer": tf.keras.initializers.RandomNormal(stddev=np.sqrt(0.02)),
+                "gamma_initializer": tf.keras.initializers.RandomNormal(stddev=np.sqrt(0.02))
+            }
+        else:
+            raise ValueError("Undefined normalization.")
 
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(32, 32, num_channel))
 
         self.conv_layer1 = tf.keras.layers.Conv2D(filters=num_filter, kernel_size=4, strides=2, padding="same")
-        self.batch_norm1 = tf.keras.layers.BatchNormalization()
+        self.norm1 = self.normalization_layer(**kwargs_list)
         self.relu1 = tf.keras.layers.ReLU()
 
         self.conv_layer2 = tf.keras.layers.Conv2D(filters=2 * num_filter, kernel_size=4, strides=2, padding="same")
-        self.batch_norm2 = tf.keras.layers.BatchNormalization()
+        self.norm2 = self.normalization_layer(**kwargs_list)
         self.relu2 = tf.keras.layers.ReLU()
 
         self.conv_layer3 = tf.keras.layers.Conv2D(filters=4 * num_filter, kernel_size=4, strides=2, padding="same")
-        self.batch_norm3 = tf.keras.layers.BatchNormalization()
+        self.norm3 = self.normalization_layer(**kwargs_list)
         self.relu3 = tf.keras.layers.ReLU()
 
         self.conv_layer4_mean = tf.keras.layers.Conv2D(
@@ -39,15 +57,15 @@ class Encoder(tf.keras.Model):
         x = self.input_layer(inputs)
 
         x = self.conv_layer1(x)
-        x = self.batch_norm1(x)
+        x = self.norm1(x)
         x = self.relu1(x)
 
         x = self.conv_layer2(x)
-        x = self.batch_norm2(x)
+        x = self.norm2(x)
         x = self.relu2(x)
 
         x = self.conv_layer3(x)
-        x = self.batch_norm3(x)
+        x = self.norm3(x)
         x = self.relu3(x)
 
         z_mean = self.conv_layer4_mean(x)
@@ -60,7 +78,8 @@ class Encoder(tf.keras.Model):
         config.update({
             'num_channel': self.num_channel,
             'num_filter': self.num_filter,
-            'latent_dimensions': self.latent_dimensions
+            'latent_dimensions': self.latent_dimensions,
+            "normalization": self.normalization
         })
         return config
 
@@ -72,30 +91,45 @@ class Encoder(tf.keras.Model):
 
 
 class Decoder(tf.keras.Model):
-    def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, decoder_dist="cBern", name="decoder",
-                 **kwargs):
+    def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, decoder_dist="cBern", normalization="batch",
+                 name="decoder", **kwargs):
         super(Decoder, self).__init__(name=name, **kwargs)
 
         self.num_channel = num_channel
         self.num_filter = num_filter
         self.latent_dimensions = latent_dimensions
         self.decoder_dist = decoder_dist
+        self.normalization = normalization
+
+        if normalization == "batch":
+            self.normalization_layer = tf.keras.layers.BatchNormalization
+            kwargs_list = {}
+        elif normalization == "instance":
+            self.normalization_layer = tfa.layers.InstanceNormalization
+            kwargs_list = {
+                "center": True,
+                "scale": True,
+                "beta_initializer": tf.keras.initializers.RandomNormal(stddev=np.sqrt(0.02)),
+                "gamma_initializer": tf.keras.initializers.RandomNormal(stddev=np.sqrt(0.02))
+            }
+        else:
+            raise ValueError("Undefined normalization.")
 
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(1, 1, latent_dimensions))
 
         self.deconv_layer1 = tf.keras.layers.Conv2DTranspose(filters=4 * num_filter, kernel_size=4, strides=1,
                                                              padding="valid")
-        self.batch_norm1 = tf.keras.layers.BatchNormalization()
+        self.norm1 = self.normalization_layer(**kwargs_list)
         self.relu1 = tf.keras.layers.ReLU()
 
         self.deconv_layer2 = tf.keras.layers.Conv2DTranspose(filters=2 * num_filter, kernel_size=4, strides=2,
                                                              padding="same")
-        self.batch_norm2 = tf.keras.layers.BatchNormalization()
+        self.norm2 = self.normalization_layer(**kwargs_list)
         self.relu2 = tf.keras.layers.ReLU()
 
         self.deconv_layer3 = tf.keras.layers.Conv2DTranspose(filters=num_filter, kernel_size=4, strides=2,
                                                              padding="same")
-        self.batch_norm3 = tf.keras.layers.BatchNormalization()
+        self.norm3 = self.normalization_layer(**kwargs_list)
         self.relu3 = tf.keras.layers.ReLU()
 
         if decoder_dist == "cBern":
@@ -116,15 +150,15 @@ class Decoder(tf.keras.Model):
         x = self.input_layer(inputs)
 
         x = self.deconv_layer1(x)
-        x = self.batch_norm1(x)
+        x = self.norm1(x)
         x = self.relu1(x)
 
         x = self.deconv_layer2(x)
-        x = self.batch_norm2(x)
+        x = self.norm2(x)
         x = self.relu2(x)
 
         x = self.deconv_layer3(x)
-        x = self.batch_norm3(x)
+        x = self.norm3(x)
         x = self.relu3(x)
         x = self.deconv_layer4(x)
         reconstruction = self.reshape_layer(x)
@@ -137,7 +171,8 @@ class Decoder(tf.keras.Model):
             'num_channel': self.num_channel,
             'num_filter': self.num_filter,
             'latent_dimensions': self.latent_dimensions,
-            'decoder_dist': self.decoder_dist
+            'decoder_dist': self.decoder_dist,
+            "normalization": self.normalization
         })
         return config
 
@@ -166,7 +201,7 @@ class Sampling(tf.keras.layers.Layer):
 
 class CVAE(tf.keras.Model):
     def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, num_samples=100, decoder_dist="cBern",
-                 name="cvae", **kwargs):
+                 normalization="batch", name="cvae", **kwargs):
         super(CVAE, self).__init__(name=name, **kwargs)
 
         self.num_channel = num_channel
@@ -174,12 +209,13 @@ class CVAE(tf.keras.Model):
         self.latent_dimensions = latent_dimensions
         self.num_samples = num_samples
         self.decoder_dist = decoder_dist
+        self.normalization = normalization
 
         self.appy_correction = False
 
         self.sampling = Sampling()
-        self.encoder = Encoder(num_channel, num_filter, latent_dimensions)
-        self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist)
+        self.encoder = Encoder(num_channel, num_filter, latent_dimensions, normalization)
+        self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist, normalization)
 
     @tf.function
     def call(self, inputs, training=None):
@@ -206,7 +242,8 @@ class CVAE(tf.keras.Model):
             'num_filter': self.num_filter,
             'latent_dimensions': self.latent_dimensions,
             'num_samples': self.num_samples,
-            'decoder_dist': self.decoder_dist
+            'decoder_dist': self.decoder_dist,
+            "normalization": self.normalization
         })
         return config
 
@@ -272,6 +309,7 @@ class CVAE(tf.keras.Model):
         lq_z_x = tfp.distributions.Normal(loc=z_mean, scale=z_sigma).log_prob(z)
         lp_z = tfp.distributions.Normal(loc=0, scale=1).log_prob(z)
 
-        loss = tf.reduce_logsumexp(tf.reduce_sum(lp_z - lq_z_x, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
+        loss = tf.reduce_logsumexp(tf.reduce_sum(lp_z - lq_z_x, axis=[2, 3, 4]), axis=0) - tf.math.log(
+            float(self.num_samples))
 
         return -tf.reduce_mean(loss)

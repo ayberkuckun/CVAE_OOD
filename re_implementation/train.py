@@ -5,8 +5,6 @@ from re_implementation.helpers import model_helper
 
 # todo bernoulli and gasussian
 
-# todo instance normalization layers
-
 """
 Notes:
 1) Tensorflow 2 is not clear enough.
@@ -24,30 +22,32 @@ train = True
 continue_ckpt = False
 checkpoint_epoch = '0962'
 
-dataset_type = 'grayscale'
-# dataset_type = 'natural'
+# dataset_type = 'grayscale'
+dataset_type = 'natural'
 
-dataset = 'mnist'
+# dataset = 'mnist'
 # dataset = 'fmnist'
 
-# dataset = 'cifar10'
+dataset = 'cifar10'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-# decoder_dist = 'cBern'
-decoder_dist = 'cat'
+decoder_dist = 'cBern'
+# decoder_dist = 'cat'
 
 epochs = 1000
 batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
+normalization = "batch"
+# normalization = "instance"  # May require tensorflow >= 2.9.0
 contrast_normalize = True
 
 if contrast_normalize:
-    method = 'BC-LL-CS'
+    method = f'BC-LL-CS-{normalization}'
 else:
-    method = 'BC-LL-no-CS'
+    method = f'BC-LL-no-CS-{normalization}'
 
 x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
 
@@ -67,7 +67,8 @@ cvae = model_helper.CVAE(
     num_filter=num_filter,
     latent_dimensions=latent_dimensions,
     num_samples=num_samples,
-    decoder_dist=decoder_dist
+    decoder_dist=decoder_dist,
+    normalization=normalization
 )
 
 if continue_ckpt:
