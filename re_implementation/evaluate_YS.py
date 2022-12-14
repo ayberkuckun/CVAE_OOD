@@ -37,7 +37,6 @@ def evaluating(cvae, dataset, decoder_dist, dataset_type):
     elif decoder_dist == "cat":
         recoloss = cvae.categorical_loss(in_sample, output['reconstruction'])
     elbo = recoloss - klloss
-    elbo = elbo - np.log(5)
     origl_probs[dataset].append(elbo.numpy())
 
     #Computes correction log likelihood estimate.
@@ -50,24 +49,6 @@ def evaluating(cvae, dataset, decoder_dist, dataset_type):
 
     return {'orig_probs': origl_probs, 'corr_probs': corrct_probs}
 
-
-'''
-    in_sample = next(iter(x_val))
-    in_sample = np.expand_dims(in_sample, axis=0)
-    cvae.num_samples = 100
-    output = cvae.predict(in_sample)
-    cvae.appy_correction = True
-    loss1 = cvae.continuous_bernoulli_loss(in_sample, output['reconstruction'])
-    loss2 = cvae.kl_divergence_loss(in_sample, output['kl_divergence'])
-    vae_loss = loss1 + loss2    # label 1
-
-    out_sample = in_sample
-    output2 = cvae.predict(out_sample)
-    loss2 = cvae.continuous_bernoulli_loss(out_sample, output2['reconstruction'])  # label 0
-    vae_loss2 = loss1+loss2
-    elbo = tf.reduce_logsumexp(vae_loss2 - vae_loss, axis=0)
-    elbo = elbo - tf.math.log(tf.cast(100, dtype=tf.float32))
-'''
 
 #thershold for loss etc?
 def thershold(model, x_latent, x_test):
