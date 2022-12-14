@@ -362,7 +362,6 @@ def load_svhn(decoder_dist, frac=0.9):
     ds_test: test set
   """
     print("The SVHN_cropped dataset is being downloaded")
-    # todo easier/faster way to split dataset to train and val.
     train_images = tfds.load('svhn_cropped', split='train[:90%]', shuffle_files=True)
     val_images = tfds.load('svhn_cropped', split='train[90%:]', shuffle_files=True)
     test_images = tfds.load('svhn_cropped', split='test', shuffle_files=True)
@@ -385,9 +384,13 @@ def load_svhn(decoder_dist, frac=0.9):
     # val_images = train_and_val_images[cut:]
     #val_labels = train_and_val_labels[cut:]
 
-    test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
-    train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
-    val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
+    test_images = test_images.map(lambda x: x["image"])
+    train_images = train_images.map(lambda x: x["image"])
+    val_images = val_images.map(lambda x: x["image"])
+
+    test_images = tf.convert_to_tensor(list(test_images), dtype=tf.float32, dtype_hint=None, name=None)
+    train_images = tf.convert_to_tensor(list(train_images), dtype=tf.float32, dtype_hint=None, name=None)
+    val_images = tf.convert_to_tensor(list(val_images), dtype=tf.float32, dtype_hint=None, name=None)
 
     #max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
     #print("MAX", max)
