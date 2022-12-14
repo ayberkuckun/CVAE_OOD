@@ -3,5 +3,4 @@
 **/datasets/
 **/models/
 **/__pycache__/
-**/checkpoint
 **/weights-*
