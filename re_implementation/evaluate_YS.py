@@ -36,19 +36,17 @@ def evaluating(cvae, dataset, decoder_dist, dataset_type):
         recoloss = cvae.continuous_bernoulli_loss(in_sample, output['reconstruction'])
     elif decoder_dist == "cat":
         recoloss = cvae.categorical_loss(in_sample, output['reconstruction'])
-    #elbo = tf.reduce_logsumexp(recoloss - klloss, axis=0)
-    #elbo = elbo - tf.math.log(tf.cast(5, dtype=tf.float32))
     elbo = recoloss - klloss
     elbo = elbo - np.log(5)
     origl_probs[dataset].append(elbo.numpy())
 
     #Computes correction log likelihood estimate.
-    target = in_sample[1]
+    #target = in_sample[1]
     cvae.appy_correction = True
     #corrct_probs[dataset].append(elbo -correct(target).sum(axis=(1, 2, 3)))
 
-    origl_probs[dataset] = np.concatenate(origl_probs[dataset], axis=0)
-    corrct_probs[dataset] = np.concatenate(corrct_probs[dataset], axis=0)
+    #origl_probs[dataset] = np.concatenate(origl_probs[dataset], axis=0)
+    #corrct_probs[dataset] = np.concatenate(corrct_probs[dataset], axis=0)
 
     return {'orig_probs': origl_probs, 'corr_probs': corrct_probs}
 
@@ -84,11 +82,11 @@ def thershold(model, x_latent, x_test):
             return True
 
 
-checkpoint_epoch = '0004'
+checkpoint_epoch = '0850'
 dataset_type = 'grayscale'  #'grayscale'  'natural'
-dataset = 'cifar10'  #'mnist'  'fmnist' 'cifar10'  'svhn' 'gtsrb'
+dataset = 'emnist'  #'mnist'  'emnist' 'cifar10'  'svhn' 'gtsrb'
 decoder_dist = 'cBern'  #'cBern'  'cat'
-method = 'BC-LL'
+method = 'BC-LL-no-CS'  #'BC-LL-CS'
 
 latent_dimensions = 20
 num_samples = 1
@@ -116,6 +114,6 @@ cvae.compile(
     loss={'reconstruction': cvae.get_reconstruction_loss_func(),
           'kl_divergence': cvae.kl_divergence_loss}
 )
-cvae.load_weights(f'saved_models/{decoder_dist}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
+cvae.load_weights(f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
 # correction part
 pro_result = evaluating(cvae, dataset, decoder_dist, dataset_type)
