@@ -32,8 +32,8 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-decoder_dist = 'cBern'
-# decoder_dist = 'cat'
+# decoder_dist = 'cBern'
+decoder_dist = 'cat'
 
 epochs = 1000
 batch_size = 64

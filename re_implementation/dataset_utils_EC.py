@@ -363,26 +363,26 @@ def load_svhn(decoder_dist, frac=0.9):
   """
     print("The SVHN_cropped dataset is being downloaded")
     # todo easier/faster way to split dataset to train and val.
-    #train_images = tfds.load('svhn_cropped', split='train[:90%]', shuffle_files=True)
-    #val_images = tfds.load('svhn_cropped', split='train[90%:]', shuffle_files=True)
-    #test_images = tfds.load('svhn_cropped', split='test', shuffle_files=True)
+    train_images = tfds.load('svhn_cropped', split='train[:90%]', shuffle_files=True)
+    val_images = tfds.load('svhn_cropped', split='train[90%:]', shuffle_files=True)
+    test_images = tfds.load('svhn_cropped', split='test', shuffle_files=True)
 
-    train_and_val_set = tfds.load('svhn_cropped', split='train', shuffle_files=True)
-    test = tfds.load('svhn_cropped', split='test', shuffle_files=True)
+    # train_and_val_set = tfds.load('svhn_cropped', split='train', shuffle_files=True)
+    # test = tfds.load('svhn_cropped', split='test', shuffle_files=True)
 
-    train_and_val_images = [item["image"].numpy() for item in train_and_val_set.take(-1)]
+    # train_and_val_images = [item["image"].numpy() for item in train_and_val_set.take(-1)]
     #train_and_val_labels = [item["label"].numpy() for item in train_and_val_set.take(-1)]
 
-    test_images = [item["image"].numpy() for item in test.take(-1)]
+    # test_images = [item["image"].numpy() for item in test.take(-1)]
     #test_labels = [item["label"].numpy() for item in test.take(-1)]
 
-    n = len(train_and_val_images)
-    cut = int(n * frac)
+    # n = len(train_and_val_images)
+    # cut = int(n * frac)
 
-    train_images = train_and_val_images[0:cut]
+    # train_images = train_and_val_images[0:cut]
     #train_labels = train_and_val_labels[0:cut]
 
-    val_images = train_and_val_images[cut:]
+    # val_images = train_and_val_images[cut:]
     #val_labels = train_and_val_labels[cut:]
 
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
@@ -394,9 +394,9 @@ def load_svhn(decoder_dist, frac=0.9):
 
     if decoder_dist == "cBern":
         # Normalize images (already 32 x32)
-        test_images = test_images / 255
-        train_images = train_images / 255
-        val_images = val_images / 255
+        test_images = test_images / 255.0
+        train_images = train_images / 255.0
+        val_images = val_images / 255.0
 
     elif decoder_dist == "cat":
         # Normalize images (already 32 x32)
