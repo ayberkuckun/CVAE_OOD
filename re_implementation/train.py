@@ -3,7 +3,6 @@ import tensorflow as tf
 from re_implementation import dataset_utils_EC
 from re_implementation.helpers import model_helper
 
-# todo bernoulli and gasussian
 
 """
 Notes:
@@ -13,6 +12,7 @@ identical but that paper also does not specify their network structure. One need
 for that paper too.
 3) They only apply de-biasing on evaluation not while training.
 4) They only apply importance weighting on evaluation.
+5) We didn't apply clipping.
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
@@ -22,13 +22,13 @@ train = True
 continue_ckpt = False
 checkpoint_epoch = '0962'
 
-# dataset_type = 'grayscale'
-dataset_type = 'natural'
+dataset_type = 'grayscale'
+# dataset_type = 'natural'
 
-# dataset = 'mnist'
-# dataset = 'fmnist'
+dataset = 'mnist'
+# dataset = 'emnist'
 
-dataset = 'cifar10'
+# dataset = 'cifar10'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
@@ -40,9 +40,9 @@ batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-normalization = "batch"
-# normalization = "instance"  # May require tensorflow >= 2.9.0
-contrast_normalize = True
+# normalization = "batch"
+normalization = "instance"
+contrast_normalize = False
 
 if contrast_normalize:
     method = f'BC-LL-CS-{normalization}'

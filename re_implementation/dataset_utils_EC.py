@@ -108,9 +108,9 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
         test_images = tf.map_fn(contrast_normalization, test_images, back_prop=False, parallel_iterations=20)
 
         if decoder_dist == "cat":
-            train_images = tf.round(train_images * 255)
-            val_images = tf.round(val_images * 255)
-            test_images = tf.round(test_images * 255)
+            train_images = tf.round(train_images * 255.0)
+            val_images = tf.round(val_images * 255.0)
+            test_images = tf.round(test_images * 255.0)
 
     return train_images, val_images, test_images
 
@@ -205,6 +205,7 @@ def load_cifar10(decoder_dist, frac=0.9):
     #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
+
 def load_mnist(decoder_dist, frac=0.9):
     """Load mnist dataset and create training, validation and test sets.
   Args:
@@ -228,9 +229,9 @@ def load_mnist(decoder_dist, frac=0.9):
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
-        train_images = resize(train_images) / 255
-        val_images = resize(val_images) / 255
-        test_images = resize(test_images) / 255
+        train_images = resize(train_images) / 255.0
+        val_images = resize(val_images) / 255.0
+        test_images = resize(test_images) / 255.0
 
     elif decoder_dist == "cat":
         # Resize & Normalize images
@@ -274,9 +275,9 @@ def load_fmnist(decoder_dist, frac=0.9):
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
-        train_images = resize(train_images) / 255
-        val_images = resize(val_images) / 255
-        test_images = resize(test_images) / 255
+        train_images = resize(train_images) / 255.0
+        val_images = resize(val_images) / 255.0
+        test_images = resize(test_images) / 255.0
 
     elif decoder_dist == "cat":
         # Resize & Normalize images
@@ -297,6 +298,7 @@ def load_fmnist(decoder_dist, frac=0.9):
 
     #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
+
 
 def load_emnist(decoder_dist, frac=0.9):
     """Load e_mnist letters dataset and create training, validation and test sets.
@@ -325,9 +327,9 @@ def load_emnist(decoder_dist, frac=0.9):
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
-        train_images = resize(train_images) / 255
-        val_images = resize(val_images) / 255
-        test_images = resize(test_images) / 255
+        train_images = resize(train_images) / 255.0
+        val_images = resize(val_images) / 255.0
+        test_images = resize(test_images) / 255.0
 
     elif decoder_dist == "cat":
         # Resize & Normalize images
