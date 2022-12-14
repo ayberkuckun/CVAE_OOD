@@ -57,6 +57,7 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
+@tf.function
 def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
     if dataset_type == "grayscale":
         if dataset == "mnist":
@@ -102,11 +103,14 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
         raise NotImplementedError
 
     if contrast_normalize:
-        train_images = tf.map_fn(contrast_normalization, train_images)
-        val_images = tf.map_fn(contrast_normalization, val_images)
-        test_images = tf.map_fn(contrast_normalization, test_images)
-    #else:
-        #continue
+        train_images = tf.map_fn(contrast_normalization, train_images, back_prop=False, parallel_iterations=20)
+        val_images = tf.map_fn(contrast_normalization, val_images, back_prop=False, parallel_iterations=20)
+        test_images = tf.map_fn(contrast_normalization, test_images, back_prop=False, parallel_iterations=20)
+
+        if decoder_dist == "cat":
+            train_images = tf.round(train_images * 255)
+            val_images = tf.round(val_images * 255)
+            test_images = tf.round(test_images * 255)
 
     return train_images, val_images, test_images
 
@@ -512,6 +516,8 @@ def load_gtrsb(decoder_dist, frac=0.9):
     #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
+
+@tf.function(input_signature=[tf.TensorSpec(shape=[32, 32, None], dtype=tf.float32)])
 def contrast_normalization(image):
     """Function which performs image normalization as described in par.3.3
     Args:
@@ -521,7 +527,13 @@ def contrast_normalization(image):
 
     a = tfp.stats.percentile(image, 5)
     r = tfp.stats.percentile(image, 95) - a
-    output = [tf.math.minimum(tf.math.maximum(0, (x - a) / r), 1) for x in image]
-    normalised = tf.convert_to_tensor(output, dtype=tf.float32, dtype_hint=None, name=None)
 
-    return normalised
+    output = (image - a) / r
+    output = tf.clip_by_value(output, 0., 1.)
+
+    # output = tf.map_fn(lambda x: tf.math.minimum(tf.math.maximum(0.0, (x - a) / r), 1.0), image, back_prop=False, parallel_iterations=20)
+
+    # output = [tf.math.minimum(tf.math.maximum(0, (x - a) / r), 1) for x in image]
+    # normalised = tf.convert_to_tensor(output, dtype=tf.float32, dtype_hint=None, name=None)
+
+    return output

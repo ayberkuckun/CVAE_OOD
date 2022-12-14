@@ -34,6 +34,7 @@ class Encoder(tf.keras.Model):
             padding="valid", dtype='float32'
         )
 
+    @tf.function
     def call(self, inputs, training=None):
         x = self.input_layer(inputs)
 
@@ -110,6 +111,7 @@ class Decoder(tf.keras.Model):
         else:
             raise ValueError("Undefined Decoder Output Distribution.")
 
+    @tf.function
     def call(self, inputs, training=None):
         x = self.input_layer(inputs)
 
@@ -150,6 +152,7 @@ class Sampling(tf.keras.layers.Layer):
     def __init__(self, name="sampling", **kwargs):
         super(Sampling, self).__init__(name=name, dtype='float32', **kwargs)
 
+    @tf.function
     def call(self, inputs, num_samples):
         z_mean, z_sigma = inputs
         z = tfp.distributions.Normal(loc=z_mean, scale=z_sigma).sample(num_samples)
@@ -178,6 +181,7 @@ class CVAE(tf.keras.Model):
         self.encoder = Encoder(num_channel, num_filter, latent_dimensions)
         self.decoder = Decoder(num_channel, num_filter, latent_dimensions, decoder_dist)
 
+    @tf.function
     def call(self, inputs, training=None):
         z_mean, z_sigma = self.encoder(inputs, training=training)
         z = self.sampling((z_mean, z_sigma), self.num_samples)
@@ -212,9 +216,11 @@ class CVAE(tf.keras.Model):
         model.summary()
         return model
 
+    @tf.function
     def continuous_bernoulli_loss(self, x_true, reconstruction):
         reconstruction = tf.reshape(reconstruction, (self.num_samples, -1, 32, 32, self.num_channel))
 
+        # lp_x_z = tfp.distributions.ContinuousBernoulli(logits=tf.clip_by_value(reconstruction, -15.94, 15.94)).log_prob(x_true)
         lp_x_z = tfp.distributions.ContinuousBernoulli(logits=reconstruction).log_prob(x_true)
 
         loss = tf.reduce_mean(
@@ -229,6 +235,7 @@ class CVAE(tf.keras.Model):
 
         return -corrected_loss
 
+    @tf.function
     def categorical_loss(self, x_true, reconstruction):
         reconstruction = tf.reshape(reconstruction, (self.num_samples, -1, 32, 32, self.num_channel, 256))
 
@@ -258,6 +265,7 @@ class CVAE(tf.keras.Model):
 
         return loss_func
 
+    @tf.function
     def kl_divergence_loss(self, x_true, z_stack):
         z_mean, z_sigma, z = tf.unstack(z_stack)
 

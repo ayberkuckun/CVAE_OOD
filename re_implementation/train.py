@@ -3,9 +3,7 @@ import tensorflow as tf
 from re_implementation import dataset_utils_EC
 from re_implementation.helpers import model_helper
 
-# todo training = True check
 # todo bernoulli and gasussian
-# todo logits clip value or give prob?
 
 # todo instance normalization layers
 
@@ -44,7 +42,7 @@ batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-contrast_normalize = False
+contrast_normalize = True
 
 if contrast_normalize:
     method = 'BC-LL-CS'
@@ -77,9 +75,9 @@ if continue_ckpt:
 else:
     checkpoint_epoch = 0
 
-cvae.encoder.print_network()
-cvae.decoder.print_network()
-cvae.print_network()
+# cvae.encoder.print_network()
+# cvae.decoder.print_network()
+# cvae.print_network()
 
 cvae.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4),
