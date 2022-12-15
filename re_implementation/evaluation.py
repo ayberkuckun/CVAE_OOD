@@ -79,7 +79,7 @@ cvae = model_helper.CVAE(
     normalization=normalization
 )
 
-cvae.load_weights(f'saved_models/clip/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
+cvae.load_weights(f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
 
 cvae.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4),

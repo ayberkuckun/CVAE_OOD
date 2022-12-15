@@ -88,7 +88,7 @@ cvae.compile(
 
 if train:
     checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f'saved_models/clip/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
+        filepath=f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
         monitor='val_loss',
         save_best_only=True,
         save_weights_only=True,
