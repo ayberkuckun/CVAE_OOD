@@ -39,10 +39,12 @@ dataset = 'mnist'
 decoder_dist = 'cBern'
 # decoder_dist = 'cat'
 
-checkpoint_epoch = '0878'
+# checkpoint_epoch = '0878'
 # checkpoint_epoch = '0192'
 # checkpoint_epoch = '0039'
 # checkpoint_epoch = '0011'
+# checkpoint_epoch = '0870'
+checkpoint_epoch = '0858'
 
 latent_dimensions = 20
 num_samples = 1
@@ -77,7 +79,7 @@ cvae = model_helper.CVAE(
     normalization=normalization
 )
 
-cvae.load_weights(f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
+cvae.load_weights(f'saved_models/clip/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-{checkpoint_epoch}')
 
 cvae.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4),
@@ -91,7 +93,7 @@ cvae.apply_mean = False
 contrast_normalize = True
 
 x_train, _, x_test_id = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize, training=False)
-x_test_id_batched = tf.split(x_test_id, 100 * num_samples)
+x_test_id_batched = tf.split(x_test_id, 100 * cvae.num_samples)
 ll_list = []
 for x_test_batch in tqdm(x_test_id_batched):
     ll = cvae.likelihood(x_test_batch, training=False)
@@ -111,7 +113,7 @@ auroc_list_ll = []
 # auroc_list_bc_ll = []
 for dataset_ood in dataset_list:
     _, _, x_test_ood = dataset_utils_EC.get_dataset(dataset_ood, decoder_dist, dataset_type, contrast_normalize, training=False)
-    x_test_ood_batched = tf.split(x_test_ood, 100 * num_samples)
+    x_test_ood_batched = tf.split(x_test_ood, 100 * cvae.num_samples)
     ll_list = []
     for x_test_batch in tqdm(x_test_ood_batched):
         ll = cvae.likelihood(x_test_batch, training=False)

@@ -310,4 +310,4 @@ class CVAE(tf.keras.Model):
 
         ll = recon_loss + kl_loss
 
-        return ll
+        return -ll

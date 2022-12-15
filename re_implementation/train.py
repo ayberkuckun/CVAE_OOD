@@ -42,7 +42,7 @@ num_samples = 1
 
 normalization = "batch"
 # normalization = "instance"
-contrast_normalize = False
+contrast_normalize = True
 
 if contrast_normalize:
     method = f'BC-LL-CS-{normalization}'

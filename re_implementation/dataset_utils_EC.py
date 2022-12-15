@@ -57,7 +57,7 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
-# @tf.function
+# @tf.function # if uncommented, CS is faster but noise doesn't work.
 def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, training=True):
     if dataset_type == "grayscale":
         if dataset == "mnist":
