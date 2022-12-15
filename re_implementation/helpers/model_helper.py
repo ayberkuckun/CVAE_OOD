@@ -253,7 +253,6 @@ class CVAE(tf.keras.Model):
         model.summary()
         return model
 
-    @tf.function
     def continuous_bernoulli_loss(self, x_true, reconstruction):
         reconstruction = tf.reshape(reconstruction, (self.num_samples, -1, 32, 32, self.num_channel))
 
@@ -267,7 +266,6 @@ class CVAE(tf.keras.Model):
 
         return -loss
 
-    @tf.function
     def categorical_loss(self, x_true, reconstruction):
         reconstruction = tf.reshape(reconstruction, (self.num_samples, -1, 32, 32, self.num_channel, 256))
 
@@ -292,7 +290,6 @@ class CVAE(tf.keras.Model):
 
         return loss_func
 
-    @tf.function
     def kl_divergence_loss(self, x_true, z_stack):
         z_mean, z_sigma, z = tf.unstack(z_stack)
 
