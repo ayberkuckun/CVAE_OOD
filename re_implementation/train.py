@@ -97,7 +97,7 @@ if train:
     )
 
     cvae.fit(
-        x=x_train,
+        x=x_train / 255.0,  # correct method for categorical.
         y={'reconstruction': x_train, 'kl_divergence': x_train},
         validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
         batch_size=batch_size,
