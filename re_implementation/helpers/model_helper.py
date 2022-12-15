@@ -304,7 +304,13 @@ class CVAE(tf.keras.Model):
 
     @tf.function
     def likelihood(self, x_test_batch, training=False):
-        x_out = self.call(x_test_batch, training)
+        if self.decoder_dist == "cat":
+            x_out = self.call(x_test_batch / 255.0, training)
+        elif self.decoder_dist == "cBern":
+            x_out = self.call(x_test_batch, training)
+        else:
+            raise ValueError
+
         recon_loss = self.get_reconstruction_loss_func()(x_test_batch, x_out["reconstruction"])
         kl_loss = self.kl_divergence_loss(x_test_batch, x_out["kl_divergence"])
 

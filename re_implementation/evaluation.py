@@ -36,15 +36,15 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-decoder_dist = 'cBern'
-# decoder_dist = 'cat'
+# decoder_dist = 'cBern'
+decoder_dist = 'cat'
 
 # checkpoint_epoch = '0878'
-# checkpoint_epoch = '0192'
+checkpoint_epoch = '0192'
 # checkpoint_epoch = '0039'
 # checkpoint_epoch = '0011'
 # checkpoint_epoch = '0870'
-checkpoint_epoch = '0858'
+# checkpoint_epoch = '0858'
 
 latent_dimensions = 20
 num_samples = 1

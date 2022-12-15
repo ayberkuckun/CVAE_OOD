@@ -13,6 +13,7 @@ for that paper too.
 3) They only apply de-biasing on evaluation not while training.
 4) They only apply importance weighting on evaluation.
 5) We didn't apply clipping.
+6) Categorical visible distribution input still normalized to 0-1 as input but label is 0-255.
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
@@ -32,8 +33,8 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-decoder_dist = 'cBern'
-# decoder_dist = 'cat'
+# decoder_dist = 'cBern'
+decoder_dist = 'cat'
 
 epochs = 1000
 batch_size = 64
@@ -42,7 +43,7 @@ num_samples = 1
 
 normalization = "batch"
 # normalization = "instance"
-contrast_normalize = True
+contrast_normalize = False
 
 if contrast_normalize:
     method = f'BC-LL-CS-{normalization}'
