@@ -49,7 +49,7 @@ if contrast_normalize:
 else:
     method = f'BC-LL-no-CS-{normalization}'
 
-x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
+x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize, training=True)
 
 if dataset_type == 'grayscale':
     num_filter = 32

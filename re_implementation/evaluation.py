@@ -1,15 +1,33 @@
 import numpy as np
-import sklearn
+import sklearn.metrics
 import tensorflow as tf
+from tqdm import tqdm
 
-from re_implementation import dataset_utils_EC
+from re_implementation import dataset_utils_EC, bias_corrections_EC
 from re_implementation.helpers import model_helper
 
 
-# loss smaller with clipping?
-################## OOD Dataset ##################
+# tf.keras.mixed_precision.set_global_policy('mixed_float16')
+
 dataset_type = 'grayscale'
 # dataset_type = 'natural'
+
+if dataset_type == "grayscale":
+    dataset_list = [
+        "mnist",
+        "fmnist",
+        "emnist",
+        "noise"
+    ]
+elif dataset_type == "natural":
+    dataset_list = [
+        "cifar10",
+        "svhn",
+        "gtsrb",
+        "noise"
+    ]
+else:
+    raise ValueError
 
 dataset = 'mnist'
 # dataset = 'emnist'
@@ -21,28 +39,13 @@ dataset = 'mnist'
 decoder_dist = 'cBern'
 # decoder_dist = 'cat'
 
-contrast_normalize = True
-
-_, _, x_test_ood = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
-
-################## Model ##################
-checkpoint_epoch = '0962'
-
-dataset_type = 'grayscale'
-# dataset_type = 'natural'
-
-dataset = 'mnist'
-# dataset = 'emnist'
-
-# dataset = 'cifar10'
-# dataset = 'svhn'
-# dataset = 'gtsrb'
-
-decoder_dist = 'cBern'
-# decoder_dist = 'cat'
+checkpoint_epoch = '0878'
+# checkpoint_epoch = '0192'
+# checkpoint_epoch = '0039'
+# checkpoint_epoch = '0011'
 
 latent_dimensions = 20
-num_samples = 100
+num_samples = 1
 
 normalization = "batch"
 # normalization = "instance"
@@ -53,8 +56,6 @@ if contrast_normalize:
     method = f'BC-LL-CS-{normalization}'
 else:
     method = f'BC-LL-no-CS-{normalization}'
-
-_, _, x_test_id = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
 
 if dataset_type == 'grayscale':
     num_filter = 32
@@ -84,66 +85,75 @@ cvae.compile(
           'kl_divergence': cvae.kl_divergence_loss}
 )
 
-ll_ood = tf.map_fn(
-    lambda x: cvae.evaluate(
-        x=x,
-        y={'reconstruction': x, 'kl_divergence': x},
-    ),
-    x_test_ood,
-    parallel_iterations=20,
-    back_prop=False,
-)
+# ------------------------ Evaluation --------------------------------- #
+cvae.num_samples = 1
+cvae.apply_mean = False
+contrast_normalize = True
 
-cvae.appy_correction = True
+x_train, _, x_test_id = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize, training=False)
+x_test_id_batched = tf.split(x_test_id, 100 * num_samples)
+ll_list = []
+for x_test_batch in tqdm(x_test_id_batched):
+    ll = cvae.likelihood(x_test_batch, training=False)
+    ll_list.append(ll)
 
-bc_ll_ood = tf.map_fn(
-    lambda x: cvae.evaluate(
-        x=x,
-        y={'reconstruction': x, 'kl_divergence': x},
-    ),
-    x_test_ood,
-    parallel_iterations=20,
-    back_prop=False,
-)
+ll_id = tf.concat(ll_list, axis=0)
 
-ll_id = tf.map_fn(
-    lambda x: cvae.evaluate(
-        x=x,
-        y={'reconstruction': x, 'kl_divergence': x},
-    ),
-    x_test_id,
-    parallel_iterations=20,
-    back_prop=False,
-)
+# correction_list = []
+# for x_test in tqdm(x_test_id):
+#     correction_id = bias_corrections_EC.get_bias_corrected_lkl(cvae, tf.expand_dims(x_test, 0), training_set=x_train)
+#     correction_list.append(correction_id)
+#
+# correction_id = tf.concat(correction_list, axis=0)
+# corrected_ll_id = ll_id - correction_id
 
-cvae.appy_correction = True
+auroc_list_ll = []
+# auroc_list_bc_ll = []
+for dataset_ood in dataset_list:
+    _, _, x_test_ood = dataset_utils_EC.get_dataset(dataset_ood, decoder_dist, dataset_type, contrast_normalize, training=False)
+    x_test_ood_batched = tf.split(x_test_ood, 100 * num_samples)
+    ll_list = []
+    for x_test_batch in tqdm(x_test_ood_batched):
+        ll = cvae.likelihood(x_test_batch, training=False)
+        ll_list.append(ll)
 
-bc_ll_id = tf.map_fn(
-    lambda x: cvae.evaluate(
-        x=x,
-        y={'reconstruction': x, 'kl_divergence': x},
-    ),
-    x_test_id,
-    parallel_iterations=20,
-    back_prop=False,
-)
+    ll_ood = tf.concat(ll_list, axis=0)
 
-y_true = np.concatenate([np.zeros_like(ll_ood),
-                          np.ones_like(ll_id)])
+    # --- LL --- #
 
-y_score = np.concatenate([ll_ood,
-                      ll_id])
+    y_true = np.concatenate([np.zeros_like(ll_ood), np.ones_like(ll_id)])
+    y_score = np.concatenate([ll_ood, ll_id])
 
-auroc = sklearn.metrics.roc_auc_score(y_true, y_score)
+    auroc_ll = sklearn.metrics.roc_auc_score(y_true, y_score)
+    auroc_list_ll.append(auroc_ll)
 
-print(f"LL - AUROC: {auroc}")
+    print(f"{dataset}_VAE/{dataset_ood}-LL-AUROC: {auroc_ll}")
 
-y_true_bc = np.concatenate([np.zeros_like(bc_ll_ood),
-                          np.ones_like(bc_ll_id)])
+    # --- BC-LL --- #
 
-y_score_bc = np.concatenate([bc_ll_ood,
-                      bc_ll_id])
+    # correction_list = []
+    # for x_test in tqdm(x_test_ood):
+    #     correction_ood = bias_corrections_EC.get_bias_corrected_lkl(cvae, x_test, training_set=x_train)
+    #     correction_list.append(correction_ood)
+    #
+    # correction_ood = tf.concat(correction_list, axis=0)
+    # corrected_ll_ood = ll_ood - correction_ood
+    #
+    # y_true = np.concatenate([np.zeros_like(corrected_ll_ood), np.ones_like(corrected_ll_id)])
+    # y_score = np.concatenate([corrected_ll_ood, corrected_ll_id])
+    #
+    # auroc_bc_ll = sklearn.metrics.roc_auc_score(y_true, y_score)
+    # auroc_list_bc_ll.append(auroc_bc_ll)
+    #
+    # print(f"{dataset}_VAE/{dataset_ood}-BC-LL-AUROC: {auroc_bc_ll}")
 
-auroc = sklearn.metrics.roc_auc_score(y_true_bc, y_score_bc)
 
-print(f"BC-LL AUROC: {auroc}")
+# for no, auroc_ll, auroc_bc_ll in enumerate(zip(auroc_list_ll, auroc_list_bc_ll)):
+#     print(f"{dataset}_VAE/{dataset_list[no]}-LL-AUROC: {auroc_ll}")
+#     print(f"{dataset}_VAE/{dataset_list[no]}-BC-LL-AUROC: {auroc_bc_ll}")
+
+for no, auroc_ll in enumerate(auroc_list_ll):
+    print(f"{dataset}_VAE/{dataset_list[no]}-LL-AUROC: {auroc_ll}")
+
+print(f"{dataset}_VAE/Average-LL-AUROC: {np.mean(auroc_list_ll)}")
+# print(f"{dataset}_VAE/Average-BC-LL-AUROC: {np.mean(auroc_list_bc_ll)}")

@@ -57,21 +57,19 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
-@tf.function
-def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
+# @tf.function
+def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, training=True):
     if dataset_type == "grayscale":
         if dataset == "mnist":
-            (train_images, _), (val_images, _), (test_images, _) = load_mnist(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_mnist(decoder_dist, training=training)
 
         elif dataset == "fmnist":
-            (train_images, _), (val_images, _), (test_images, _) = load_fmnist(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_fmnist(decoder_dist, training=training)
 
         elif dataset == "emnist":
-            train_images = None
-            val_images = None
-            (train_images, _), (val_images, _), (test_images, _) = load_emnist(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_emnist(decoder_dist, training=training)
 
-        elif dataset == "gray_noise":
+        elif dataset == "noise":
             train_images = None
             val_images = None
             test_images = noise(purpose="test", type=dataset_type, dist=decoder_dist)
@@ -81,17 +79,15 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
 
     elif dataset_type == "natural":
         if dataset == "cifar10":
-            (train_images, _), (val_images, _), (test_images, _) = load_cifar10(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_cifar10(decoder_dist, training=training)
 
         elif dataset == "svhn":
-            (train_images, _), (val_images, _), (test_images, _) = load_svhn(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_svhn(decoder_dist, training=training)
 
         elif dataset == "gtsrb":
-            train_images = None
-            val_images = None
-            (train_images, _), (val_images, _), (test_images, _) = load_gtrsb(decoder_dist)
+            (train_images, _), (val_images, _), (test_images, _) = load_gtrsb(decoder_dist, training=training)
 
-        elif dataset == "color_noise":
+        elif dataset == "noise":
             train_images = None
             val_images = None
             test_images = noise(purpose="test", type=dataset_type, dist=decoder_dist)
@@ -102,7 +98,8 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
     else:
         raise NotImplementedError
 
-    if contrast_normalize:
+
+    if contrast_normalize and dataset != "noise":
         train_images = tf.map_fn(contrast_normalization, train_images, back_prop=False, parallel_iterations=20)
         val_images = tf.map_fn(contrast_normalization, val_images, back_prop=False, parallel_iterations=20)
         test_images = tf.map_fn(contrast_normalization, test_images, back_prop=False, parallel_iterations=20)
@@ -112,7 +109,7 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False):
             val_images = tf.round(val_images * 255.0)
             test_images = tf.round(test_images * 255.0)
 
-    return train_images, val_images, test_images
+        return train_images, val_images, test_images[:10000]
 
 
 def resize(image_set):
@@ -151,8 +148,8 @@ def noise(purpose, type, dist):
     if dist =="cat":
         return output
 
-    if dist == "cBern":
-        output = output / 256
+    elif dist == "cBern":
+        output = output / 256.0
 
     else:
         raise NotImplementedError
@@ -160,7 +157,7 @@ def noise(purpose, type, dist):
     return output
 
 
-def load_cifar10(decoder_dist, frac=0.9):
+def load_cifar10(decoder_dist, frac=0.9, training=False):
     """Load CIFAR10 dataset and create training, validation and test sets.
   Args:
     decoder_dist: "cBern" or "cat"
@@ -206,7 +203,7 @@ def load_cifar10(decoder_dist, frac=0.9):
     return (train_images, None), (val_images, None), (test_images, None)
 
 
-def load_mnist(decoder_dist, frac=0.9):
+def load_mnist(decoder_dist, frac=0.9, training=False):
     """Load mnist dataset and create training, validation and test sets.
   Args:
     decoder_dist: "cBern" or "cat"
@@ -242,17 +239,14 @@ def load_mnist(decoder_dist, frac=0.9):
     else:
         raise NotImplementedError
 
-    #train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
     train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
-    # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
-    # print("MAX",max)
-
     val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+
     return (train_images, None), (val_images, None), (test_images, None)
 
-def load_fmnist(decoder_dist, frac=0.9):
+
+def load_fmnist(decoder_dist, frac=0.9, training=False):
     """Load fashion_mnist dataset and create training, validation and test sets.
   Args:
     decoder_dist: "cBern" or "cat"
@@ -300,7 +294,7 @@ def load_fmnist(decoder_dist, frac=0.9):
     return (train_images, None), (val_images, None), (test_images, None)
 
 
-def load_emnist(decoder_dist, frac=0.9):
+def load_emnist(decoder_dist, frac=0.9, training=False):
     """Load e_mnist letters dataset and create training, validation and test sets.
   Args:
     decoder_dist: "cBern" or "cat"
@@ -351,7 +345,7 @@ def load_emnist(decoder_dist, frac=0.9):
     #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
-def load_svhn(decoder_dist, frac=0.9):
+def load_svhn(decoder_dist, frac=0.9, training=False):
     """Load svhn_cropped dataset and create training, validation and test sets.
   Args:
     decoder_dist: "cBern" or "cat"
@@ -455,7 +449,7 @@ def load_celebA(frac=0.9):
     return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
 
 
-def load_gtrsb(decoder_dist, frac=0.9):
+def load_gtrsb(decoder_dist, frac=0.9, training=False):
     """Load gtrsb dataset from the given path and create training, validation and test sets.
   Source: https://medium.com/analytics-vidhya/cnn-german-traffic-signal-recognition-benchmarking-using-tensorflow-accuracy-80-d069b7996082
 

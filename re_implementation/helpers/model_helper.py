@@ -3,8 +3,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import tensorflow_addons as tfa
 
-from re_implementation.helpers import bias_helper
-
 
 class Encoder(tf.keras.Model):
     def __init__(self, num_channel=1, num_filter=32, latent_dimensions=20, normalization="batch", name="encoder",
@@ -303,3 +301,13 @@ class CVAE(tf.keras.Model):
             loss = tf.reduce_mean(loss)
 
         return -loss
+
+    @tf.function
+    def likelihood(self, x_test_batch, training=False):
+        x_out = self.call(x_test_batch, training)
+        recon_loss = self.get_reconstruction_loss_func()(x_test_batch, x_out["reconstruction"])
+        kl_loss = self.kl_divergence_loss(x_test_batch, x_out["kl_divergence"])
+
+        ll = recon_loss + kl_loss
+
+        return ll
