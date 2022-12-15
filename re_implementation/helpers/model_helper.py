@@ -211,7 +211,7 @@ class CVAE(tf.keras.Model):
         self.decoder_dist = decoder_dist
         self.normalization = normalization
 
-        self.appy_correction = False
+        self.apply_mean = True
 
         self.sampling = Sampling()
         self.encoder = Encoder(num_channel, num_filter, latent_dimensions, normalization)
@@ -260,17 +260,12 @@ class CVAE(tf.keras.Model):
         # lp_x_z = tfp.distributions.ContinuousBernoulli(logits=tf.clip_by_value(reconstruction, -15.94, 15.94)).log_prob(x_true)
         lp_x_z = tfp.distributions.ContinuousBernoulli(logits=reconstruction).log_prob(x_true)
 
-        loss = tf.reduce_mean(
-            tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
-        )
+        loss = tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
 
-        if self.appy_correction:
-            debiasing_term = bias_helper.get_bias_correction_term("cBern")
-            corrected_loss = loss - debiasing_term
-        else:
-            corrected_loss = loss
+        if self.apply_mean:
+            loss = tf.reduce_mean(loss)
 
-        return -corrected_loss
+        return -loss
 
     @tf.function
     def categorical_loss(self, x_true, reconstruction):
@@ -278,17 +273,12 @@ class CVAE(tf.keras.Model):
 
         lp_x_z = tfp.distributions.Categorical(logits=reconstruction).log_prob(x_true)
 
-        loss = tf.reduce_mean(
-            tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
-        )
+        loss = tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
 
-        if self.appy_correction:
-            debiasing_term = bias_helper.get_bias_correction_term("cat")
-            corrected_loss = loss - debiasing_term
-        else:
-            corrected_loss = loss
+        if self.apply_mean:
+            loss = tf.reduce_mean(loss)
 
-        return -corrected_loss
+        return -loss
 
     def get_reconstruction_loss_func(self):
         if self.decoder_dist == 'cBern':
@@ -312,4 +302,7 @@ class CVAE(tf.keras.Model):
         loss = tf.reduce_logsumexp(tf.reduce_sum(lp_z - lq_z_x, axis=[2, 3, 4]), axis=0) - tf.math.log(
             float(self.num_samples))
 
-        return -tf.reduce_mean(loss)
+        if self.apply_mean:
+            loss = tf.reduce_mean(loss)
+
+        return -loss

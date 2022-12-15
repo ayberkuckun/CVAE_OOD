@@ -1,8 +1,31 @@
+import numpy as np
+import sklearn
 import tensorflow as tf
 
 from re_implementation import dataset_utils_EC
 from re_implementation.helpers import model_helper
 
+
+# loss smaller with clipping?
+################## OOD Dataset ##################
+dataset_type = 'grayscale'
+# dataset_type = 'natural'
+
+dataset = 'mnist'
+# dataset = 'emnist'
+
+# dataset = 'cifar10'
+# dataset = 'svhn'
+# dataset = 'gtsrb'
+
+decoder_dist = 'cBern'
+# decoder_dist = 'cat'
+
+contrast_normalize = True
+
+_, _, x_test_ood = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
+
+################## Model ##################
 checkpoint_epoch = '0962'
 
 dataset_type = 'grayscale'
@@ -15,8 +38,8 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-# decoder_dist = 'cBern'
-decoder_dist = 'cat'
+decoder_dist = 'cBern'
+# decoder_dist = 'cat'
 
 latent_dimensions = 20
 num_samples = 100
@@ -31,7 +54,7 @@ if contrast_normalize:
 else:
     method = f'BC-LL-no-CS-{normalization}'
 
-_, _, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
+_, _, x_test_id = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize)
 
 if dataset_type == 'grayscale':
     num_filter = 32
@@ -61,24 +84,66 @@ cvae.compile(
           'kl_divergence': cvae.kl_divergence_loss}
 )
 
-tf.map_fn(
+ll_ood = tf.map_fn(
     lambda x: cvae.evaluate(
         x=x,
         y={'reconstruction': x, 'kl_divergence': x},
     ),
-    x_test,
+    x_test_ood,
     parallel_iterations=20,
     back_prop=False,
 )
 
-x_out = cvae(x_test, training=False)
+cvae.appy_correction = True
 
-image = x_test[0]
-out_image = x_out["reconstruction"][0]
+bc_ll_ood = tf.map_fn(
+    lambda x: cvae.evaluate(
+        x=x,
+        y={'reconstruction': x, 'kl_divergence': x},
+    ),
+    x_test_ood,
+    parallel_iterations=20,
+    back_prop=False,
+)
 
-rec_loss = cvae.get_reconstruction_loss_func()(image, out_image)
-kl_loss = cvae.get_reconstruction_loss_func()(image, out_image)
-
-
+ll_id = tf.map_fn(
+    lambda x: cvae.evaluate(
+        x=x,
+        y={'reconstruction': x, 'kl_divergence': x},
+    ),
+    x_test_id,
+    parallel_iterations=20,
+    back_prop=False,
+)
 
 cvae.appy_correction = True
+
+bc_ll_id = tf.map_fn(
+    lambda x: cvae.evaluate(
+        x=x,
+        y={'reconstruction': x, 'kl_divergence': x},
+    ),
+    x_test_id,
+    parallel_iterations=20,
+    back_prop=False,
+)
+
+y_true = np.concatenate([np.zeros_like(ll_ood),
+                          np.ones_like(ll_id)])
+
+y_score = np.concatenate([ll_ood,
+                      ll_id])
+
+auroc = sklearn.metrics.roc_auc_score(y_true, y_score)
+
+print(f"LL - AUROC: {auroc}")
+
+y_true_bc = np.concatenate([np.zeros_like(bc_ll_ood),
+                          np.ones_like(bc_ll_id)])
+
+y_score_bc = np.concatenate([bc_ll_ood,
+                      bc_ll_id])
+
+auroc = sklearn.metrics.roc_auc_score(y_true_bc, y_score_bc)
+
+print(f"BC-LL AUROC: {auroc}")
