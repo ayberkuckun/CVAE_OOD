@@ -109,7 +109,7 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, t
             val_images = tf.round(val_images * 255.0)
             test_images = tf.round(test_images * 255.0)
 
-        return train_images, val_images, test_images[:10000]
+    return train_images, val_images, test_images[:10000]
 
 
 def resize(image_set):

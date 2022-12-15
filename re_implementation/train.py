@@ -32,16 +32,16 @@ dataset = 'mnist'
 # dataset = 'svhn'
 # dataset = 'gtsrb'
 
-# decoder_dist = 'cBern'
-decoder_dist = 'cat'
+decoder_dist = 'cBern'
+# decoder_dist = 'cat'
 
 epochs = 1000
 batch_size = 64
 latent_dimensions = 20
 num_samples = 1
 
-# normalization = "batch"
-normalization = "instance"
+normalization = "batch"
+# normalization = "instance"
 contrast_normalize = False
 
 if contrast_normalize:
@@ -88,7 +88,7 @@ cvae.compile(
 
 if train:
     checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f'saved_models/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
+        filepath=f'saved_models/clip/{decoder_dist}/{dataset_type}/{dataset}/cvae-{method}/weights-' + '{epoch:04d}',
         monitor='val_loss',
         save_best_only=True,
         save_weights_only=True,
