@@ -1,6 +1,5 @@
 .idea/
 .svn/
-**/datasets/
-**/models/
 **/__pycache__/
 **/weights-*
+vae_ood/

@@ -6,17 +6,18 @@ from re_implementation.helpers import model_helper
 
 """
 Notes:
-1) Tensorflow 2 is not clear enough.
+1) Tensorflow 2 is not clear enough.-
 2) Paddings cannot be determined only from paper. They refer to Likelihood regret paper saying their network is near
 identical but that paper also does not specify their network structure. One needs to check the official github repo
-for that paper too.
-3) They only apply de-biasing on evaluation not while training.
-4) They only apply importance weighting on evaluation.
-5) We didn't apply clipping.
-6) Categorical visible distribution input still normalized to 0-1 as input but label is 0-255.
-7) Algorithmic bias calculation takes too long time, they also cut at 500 images but they didn't specify.
-8) bias correction analytic too tricky.
-9) The success of bc depends on logit clipping because perfect reconstruction probability matters.
+for that paper too.-
+3) They only apply de-biasing on evaluation not while training.-
+4) They only apply importance weighting on evaluation.-
+5) We didn't apply clipping.-
+6) Categorical visible distribution input still normalized to 0-1 as input but label is 0-255.-
+7) Algorithmic bias calculation takes too long time, they also cut at 500 images but they didn't specify.-
+8) bias correction analytic too tricky.-
+9) The success of bc depends on logit clipping because perfect reconstruction probability matters.-
+10) categorical correction shown as channel dependent but actually no...-
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
@@ -26,14 +27,14 @@ train = True
 continue_ckpt = False
 checkpoint_epoch = '0962'
 
-dataset_type = 'grayscale'
-# dataset_type = 'natural'
+# dataset_type = 'grayscale'
+dataset_type = 'natural'
 
 # dataset = 'mnist'
-dataset = 'emnist'
+# dataset = 'emnist'
 
 # dataset = 'cifar10'
-# dataset = 'svhn'
+dataset = 'svhn'
 # dataset = 'gtsrb'
 
 # decoder_dist = 'cBern'
@@ -51,7 +52,7 @@ num_samples = 1
 
 normalization = "batch"
 # normalization = "instance"
-contrast_normalize = False
+contrast_normalize = True
 
 if contrast_normalize:
     method = f'BC-LL-CS-{normalization}'

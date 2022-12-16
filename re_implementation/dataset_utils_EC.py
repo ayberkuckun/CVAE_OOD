@@ -91,9 +91,9 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, t
         raise NotImplementedError
 
     if contrast_normalize and dataset != "noise":
-        train_images = tf.map_fn(contrast_normalization, train_images, back_prop=False, parallel_iterations=20)
         val_images = tf.map_fn(contrast_normalization, val_images, back_prop=False, parallel_iterations=20)
         test_images = tf.map_fn(contrast_normalization, test_images, back_prop=False, parallel_iterations=20)
+        train_images = tf.map_fn(contrast_normalization, train_images, back_prop=False, parallel_iterations=20)
 
         if decoder_dist == "cat":
             train_images = tf.round(train_images * 255.0)
@@ -352,9 +352,9 @@ def load_svhn(decoder_dist, frac=0.9, training=False):
     # val_images = train_and_val_images[cut:]
     # val_labels = train_and_val_labels[cut:]
 
-    test_images = test_images.map(lambda x: x["image"])
-    train_images = train_images.map(lambda x: x["image"])
-    val_images = val_images.map(lambda x: x["image"])
+    test_images = test_images.map(lambda x: x["image"], num_parallel_calls=tf.data.AUTOTUNE)
+    train_images = train_images.map(lambda x: x["image"], num_parallel_calls=tf.data.AUTOTUNE)
+    val_images = val_images.map(lambda x: x["image"], num_parallel_calls=tf.data.AUTOTUNE)
 
     test_images = tf.convert_to_tensor(list(test_images), dtype=tf.float32, dtype_hint=None, name=None)
     train_images = tf.convert_to_tensor(list(train_images), dtype=tf.float32, dtype_hint=None, name=None)
