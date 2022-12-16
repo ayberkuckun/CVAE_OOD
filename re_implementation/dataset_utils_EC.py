@@ -12,24 +12,16 @@ To get the same training/validation split as in the paper use frac = 0.9 in the 
 The noise generator simply generates 1000 samples of required noise (greyscale or color).
 """
 
-import csv
 import cv2
-import os
-import random
-import tensorflow as tf
-from tensorflow.keras import datasets, layers, models
-import tensorflow_datasets as tfds
-import matplotlib.pyplot as plt
-from matplotlib.image import imread
-from emnist import extract_training_samples
-from emnist import extract_test_samples
-import matplotlib.pyplot as plt
 import numpy as np
-from scipy import io
 import opendatasets as od
 import pandas as pd
+import tensorflow as tf
+import tensorflow_datasets as tfds
 import tensorflow_probability as tfp
-
+from emnist import extract_test_samples
+from emnist import extract_training_samples
+from tensorflow.keras import datasets
 
 # todo check if categorical labels explained in paper.
 # todo check transform_to_dataset() func.
@@ -57,7 +49,7 @@ def transform_to_dataset(x_train, x_val, x_test):
     return train_dataset, val_dataset, test_dataset
 
 
-# @tf.function # if uncommented, CS is faster but noise doesn't work.
+@tf.function
 def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, training=True):
     if dataset_type == "grayscale":
         if dataset == "mnist":
@@ -98,7 +90,6 @@ def get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize=False, t
     else:
         raise NotImplementedError
 
-
     if contrast_normalize and dataset != "noise":
         train_images = tf.map_fn(contrast_normalization, train_images, back_prop=False, parallel_iterations=20)
         val_images = tf.map_fn(contrast_normalization, val_images, back_prop=False, parallel_iterations=20)
@@ -136,23 +127,15 @@ def noise(purpose, type, dist):
     else:
         np.random.seed(300)
 
-    output = []
-
     if type == 'grayscale':
-        output = [np.random.randint(low=0, high=256, size=(32, 32, 1)) for i in range(10000)]
+        output = np.random.uniform(low=0.0, high=1.0, size=(10000, 32, 32, 1))
     else:
-        output = [np.random.randint(low=0, high=256, size=(32, 32, 3)) for i in range(10000)]
+        output = np.random.uniform(low=0.0, high=1.0, size=(10000, 32, 32, 3))
 
-    output = tf.convert_to_tensor(output, dtype=tf.float32, dtype_hint=None, name=None)
+    output = tf.convert_to_tensor(output, dtype=tf.float32)
 
-    if dist =="cat":
-        return output
-
-    elif dist == "cBern":
-        output = output / 256.0
-
-    else:
-        raise NotImplementedError
+    if dist == "cat":
+        output = output * 255.0
 
     return output
 
@@ -190,7 +173,7 @@ def load_cifar10(decoder_dist, frac=0.9, training=False):
     val_images = train_and_val_images[cut:]
     val_labels = train_and_val_labels[cut:]
 
-    #train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
+    # train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
 
     train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
     # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
@@ -199,7 +182,7 @@ def load_cifar10(decoder_dist, frac=0.9, training=False):
     val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
 
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+    # return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
 
@@ -219,10 +202,10 @@ def load_mnist(decoder_dist, frac=0.9, training=False):
     n = len(train_and_val_labels)
     cut = int(n * frac)
     train_images = train_and_val_images[0:cut]
-    #train_labels = train_and_val_labels[0:cut]
+    # train_labels = train_and_val_labels[0:cut]
 
     val_images = train_and_val_images[cut:]
-    #val_labels = train_and_val_labels[cut:]
+    # val_labels = train_and_val_labels[cut:]
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
@@ -262,10 +245,10 @@ def load_fmnist(decoder_dist, frac=0.9, training=False):
     n = len(train_and_val_labels)
     cut = int(n * frac)
     train_images = train_and_val_images[0:cut]
-    #train_labels = train_and_val_labels[0:cut]
+    # train_labels = train_and_val_labels[0:cut]
 
     val_images = train_and_val_images[cut:]
-    #val_labels = train_and_val_labels[cut:]
+    # val_labels = train_and_val_labels[cut:]
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
@@ -282,7 +265,7 @@ def load_fmnist(decoder_dist, frac=0.9, training=False):
     else:
         raise NotImplementedError
 
-    #train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
+    # train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
     train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
     # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
     # print("MAX",max)
@@ -290,7 +273,7 @@ def load_fmnist(decoder_dist, frac=0.9, training=False):
     val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
 
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+    # return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
 
@@ -310,14 +293,9 @@ def load_emnist(decoder_dist, frac=0.9, training=False):
 
     n = len(train_and_val_labels)
     cut = int(n * frac)
+
     train_images = train_and_val_images[0:cut]
-    #train_labels = train_and_val_labels[0:cut]
-
     val_images = train_and_val_images[cut:]
-    #val_labels = train_and_val_labels[cut:]
-
-    # max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
-    # print("MAX",max)
 
     if decoder_dist == "cBern":
         # Resize & Normalize images
@@ -334,16 +312,12 @@ def load_emnist(decoder_dist, frac=0.9, training=False):
     else:
         raise NotImplementedError
 
-    #train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
     train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
-    # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
-    # print("MAX",max)
-
     val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
     test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
 
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
+
 
 def load_svhn(decoder_dist, frac=0.9, training=False):
     """Load svhn_cropped dataset and create training, validation and test sets.
@@ -364,19 +338,19 @@ def load_svhn(decoder_dist, frac=0.9, training=False):
     # test = tfds.load('svhn_cropped', split='test', shuffle_files=True)
 
     # train_and_val_images = [item["image"].numpy() for item in train_and_val_set.take(-1)]
-    #train_and_val_labels = [item["label"].numpy() for item in train_and_val_set.take(-1)]
+    # train_and_val_labels = [item["label"].numpy() for item in train_and_val_set.take(-1)]
 
     # test_images = [item["image"].numpy() for item in test.take(-1)]
-    #test_labels = [item["label"].numpy() for item in test.take(-1)]
+    # test_labels = [item["label"].numpy() for item in test.take(-1)]
 
     # n = len(train_and_val_images)
     # cut = int(n * frac)
 
     # train_images = train_and_val_images[0:cut]
-    #train_labels = train_and_val_labels[0:cut]
+    # train_labels = train_and_val_labels[0:cut]
 
     # val_images = train_and_val_images[cut:]
-    #val_labels = train_and_val_labels[cut:]
+    # val_labels = train_and_val_labels[cut:]
 
     test_images = test_images.map(lambda x: x["image"])
     train_images = train_images.map(lambda x: x["image"])
@@ -386,8 +360,8 @@ def load_svhn(decoder_dist, frac=0.9, training=False):
     train_images = tf.convert_to_tensor(list(train_images), dtype=tf.float32, dtype_hint=None, name=None)
     val_images = tf.convert_to_tensor(list(val_images), dtype=tf.float32, dtype_hint=None, name=None)
 
-    #max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
-    #print("MAX", max)
+    # max = tf.math.reduce_max(test_images,axis=None, keepdims=False, name=None)
+    # print("MAX", max)
 
     if decoder_dist == "cBern":
         # Normalize images (already 32 x32)
@@ -404,15 +378,15 @@ def load_svhn(decoder_dist, frac=0.9, training=False):
     else:
         raise NotImplementedError
 
-    #train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
-    #train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
+    # train_images, val_images, test_images = transform_to_dataset(train_images, val_images, test_images)
+    # train_images = tf.convert_to_tensor(train_images, dtype=tf.float32, dtype_hint=None, name=None)
     # max = tf.math.reduce_max(train_images,axis=None, keepdims=False, name=None)
     # print("MAX",max)
 
-    #val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
-    #test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
+    # val_images = tf.convert_to_tensor(val_images, dtype=tf.float32, dtype_hint=None, name=None)
+    # test_images = tf.convert_to_tensor(test_images, dtype=tf.float32, dtype_hint=None, name=None)
 
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+    # return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
 
@@ -475,7 +449,7 @@ def load_gtrsb(decoder_dist, frac=0.9, training=False):
 
     test_part_1 = test_data["Path"].values
     test_image_paths = [path + part for part in test_part_1]
-    #test_labels = test_data["ClassId"].values
+    # test_labels = test_data["ClassId"].values
 
     train_and_val_images = [cv2.imread(elem) for elem in train_and_val_image_paths]
     train_and_val_images = [tf.image.resize(image, [32, 32]) for image in train_and_val_images]
@@ -484,10 +458,10 @@ def load_gtrsb(decoder_dist, frac=0.9, training=False):
     cut = int(n * frac)
 
     train_images = train_and_val_images[0:cut]
-    #train_labels = train_and_val_labels[0:cut]
+    # train_labels = train_and_val_labels[0:cut]
 
     val_images = train_and_val_images[cut:]
-    #val_labels = train_and_val_labels[cut:]
+    # val_labels = train_and_val_labels[cut:]
 
     test_images = [cv2.imread(elem) for elem in test_image_paths]
     test_images = [tf.image.resize(image, [32, 32]) for image in test_images]
@@ -512,7 +486,7 @@ def load_gtrsb(decoder_dist, frac=0.9, training=False):
     else:
         raise NotImplementedError
 
-    #return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
+    # return (train_images, train_labels), (val_images, val_labels), (test_images, test_labels)
     return (train_images, None), (val_images, None), (test_images, None)
 
 
