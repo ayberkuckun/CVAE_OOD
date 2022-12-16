@@ -15,6 +15,8 @@ for that paper too.
 5) We didn't apply clipping.
 6) Categorical visible distribution input still normalized to 0-1 as input but label is 0-255.
 7) Algorithmic bias calculation takes too long time, they also cut at 500 images but they didn't specify.
+8) bias correction analytic too tricky.
+9) The success of bc depends on logit clipping because perfect reconstruction probability matters.
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')

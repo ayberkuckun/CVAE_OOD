@@ -254,8 +254,8 @@ class CVAE(tf.keras.Model):
     def continuous_bernoulli_loss(self, x_true, reconstruction):
         reconstruction = tf.reshape(reconstruction, (self.num_samples, -1, 32, 32, self.num_channel))
 
-        # lp_x_z = tfp.distributions.ContinuousBernoulli(logits=tf.clip_by_value(reconstruction, -15.94, 15.94)).log_prob(x_true)
-        lp_x_z = tfp.distributions.ContinuousBernoulli(logits=reconstruction).log_prob(x_true)
+        lp_x_z = tfp.distributions.ContinuousBernoulli(logits=tf.clip_by_value(reconstruction, -15.94, 15.94)).log_prob(x_true)
+        # lp_x_z = tfp.distributions.ContinuousBernoulli(logits=reconstruction).log_prob(x_true)
 
         loss = tf.reduce_logsumexp(tf.reduce_sum(lp_x_z, axis=[2, 3, 4]), axis=0) - tf.math.log(float(self.num_samples))
 

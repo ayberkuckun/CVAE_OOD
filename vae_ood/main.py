@@ -51,7 +51,7 @@ _LR = flags.DEFINE_float('lr', default=5e-4, help='Learning rate')
 _NUM_EPOCHS = flags.DEFINE_integer(
     'num_epochs', default=100, help='Number of epochs')
 _VISIBLE_DIST = flags.DEFINE_string(
-    'visible_dist', default='categorical', help='Visible distribution')
+    'visible_dist', default='cont_bernoulli', help='Visible distribution')
 _EXPERIMENT_DIR = flags.DEFINE_string(
     'experiment_dir', default='test', help='Model checkpoint directory')
 
@@ -123,6 +123,8 @@ def main(argv):
       latent_dim=_LATENT_DIM.value,
       visible_dist=_VISIBLE_DIST.value
   )
+
+  model.compute_corrections(ds_train)
 
   logging.info('%s model initialized', model.__class__.__name__)
 
