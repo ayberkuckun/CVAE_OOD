@@ -113,7 +113,7 @@ for x_test_batch in tqdm(x_test_id_batched):
 
 ll_id = tf.concat(ll_list, axis=0)
 cr_id = tf.concat(cr_list, axis=0)
-bc_id = ll_id + cr_id
+bc_id = ll_id - cr_id  # plus or minus?
 
 auroc_list_ll = []
 auroc_list_bc_ll = []
@@ -132,7 +132,7 @@ for dataset_ood in dataset_list:
 
     ll_ood = tf.concat(ll_list, axis=0)
     cr_ood = tf.concat(cr_list, axis=0)
-    bc_ood = ll_id + cr_ood
+    bc_ood = ll_id - cr_ood  # plus or minus?
 
     # --- LL --- #
 

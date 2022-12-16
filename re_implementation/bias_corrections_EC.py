@@ -18,12 +18,10 @@ def get_bias_corrected_lkl(decoder_dist, test_set, correction_func=None, pix_cor
         return correction_set
 
     elif decoder_dist == "cat":
-        correction_func = np.vectorize(lambda x, k: pix_corrections[x][k])
-        avg_px_val_set = tf.math.round(tf.reduce_mean(test_set, axis=[1, 2]))
+        correction_func = np.vectorize(lambda x: pix_corrections[x])
+        avg_px_val_set = tf.math.round(tf.reduce_mean(test_set, axis=[3, 2, 1]))
 
-        correction_set = tf.zeros((test_set.shape[0],))
-        for k in range(test_set.shape[-1]):
-            correction_set += tf.squeeze(correction_func(avg_px_val_set[..., k], k))
+        correction_set = tf.squeeze(correction_func(avg_px_val_set))
 
         return correction_set
 
@@ -100,12 +98,15 @@ def algorithmic_bias_correction(cvae, training_set):
                 if len(b) > 0:
                     A[k][v].append(tf.reduce_logsumexp(b) - tf.math.log(float(len(b))))
 
-    C = defaultdict(lambda: defaultdict(list))
+    C = defaultdict(lambda: 0)
 
     for k in range(nc):
         for v in range(256):
-            C[v][k] = tf.reduce_logsumexp(A[k][v]) - tf.math.log(float(len(A[k][v])))
+            C[v] += tf.reduce_logsumexp(A[k][v]) - tf.math.log(float(len(A[k][v])))
             # corrections[v, k] = tf.reduce_logsumexp(A[k][v]) - tf.math.log(float(len(A[k][v])))
+
+    for v in range(256):
+        C[v] /= nc
 
     cvae.num_samples = num_samples
 
