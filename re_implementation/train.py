@@ -14,6 +14,7 @@ for that paper too.
 4) They only apply importance weighting on evaluation.
 5) We didn't apply clipping.
 6) Categorical visible distribution input still normalized to 0-1 as input but label is 0-255.
+7) Algorithmic bias calculation takes too long time, they also cut at 500 images but they didn't specify.
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
@@ -26,8 +27,8 @@ checkpoint_epoch = '0962'
 dataset_type = 'grayscale'
 # dataset_type = 'natural'
 
-dataset = 'mnist'
-# dataset = 'emnist'
+# dataset = 'mnist'
+dataset = 'emnist'
 
 # dataset = 'cifar10'
 # dataset = 'svhn'
@@ -35,6 +36,11 @@ dataset = 'mnist'
 
 # decoder_dist = 'cBern'
 decoder_dist = 'cat'
+
+if decoder_dist == "cat":
+    scale = 255.0
+else:
+    scale = 1.0
 
 epochs = 1000
 batch_size = 64
@@ -97,7 +103,7 @@ if train:
     )
 
     cvae.fit(
-        x=x_train / 255.0,  # correct method for categorical.
+        x=x_train / scale,  # correct method for categorical.
         y={'reconstruction': x_train, 'kl_divergence': x_train},
         validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
         batch_size=batch_size,
