@@ -105,7 +105,7 @@ if train:
     cvae.fit(
         x=x_train / scale,  # correct method for categorical.
         y={'reconstruction': x_train, 'kl_divergence': x_train},
-        validation_data=(x_val, {'reconstruction': x_val, 'kl_divergence': x_val}),
+        validation_data=(x_val / scale, {'reconstruction': x_val, 'kl_divergence': x_val}),
         batch_size=batch_size,
         epochs=epochs,
         initial_epoch=int(checkpoint_epoch),
