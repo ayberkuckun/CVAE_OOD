@@ -1,7 +1,6 @@
 import tensorflow as tf
 
-from re_implementation import dataset_utils_EC
-from re_implementation.helpers import model_helper
+from helpers import model_helper, dataset_helper
 
 
 """
@@ -17,7 +16,7 @@ for that paper too.-
 7) Algorithmic bias calculation takes too long time, they also cut at 500 images but they didn't specify.-
 8) bias correction analytic too tricky.-
 9) The success of bc depends on logit clipping because perfect reconstruction probability matters.-
-10) categorical correction shown as channel dependent but actually no...-
+10) Categorical correction shown as channel dependent but actually no...-
 """
 
 # tf.keras.mixed_precision.set_global_policy('mixed_float16')
@@ -59,7 +58,7 @@ if contrast_normalize:
 else:
     method = f'BC-LL-no-CS-{normalization}'
 
-x_train, x_val, x_test = dataset_utils_EC.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize, training=True)
+x_train, x_val, x_test = dataset_helper.get_dataset(dataset, decoder_dist, dataset_type, contrast_normalize, training=True)
 
 if dataset_type == 'grayscale':
     num_filter = 32

@@ -2,4 +2,3 @@
 .svn/
 **/__pycache__/
 **/weights-*
-vae_ood/
